@@ -23,18 +23,19 @@ namespace AirWarProyecto3Datos1
         {
             InitializeComponent();
             matriz = new Matriz(30, 30); // Matriz de 30x30
-            GenerarTerreno();
+            GenerarTerrenoPerlin();
             DibujarMapa();
         }
-        private void GenerarTerreno()
+
+        public void GenerarTerrenoPerlin()
         {
-            // Ejemplo de generación de terreno aleatorio para cada nodo
-            Random random = new Random();
+            PerlinNoise perlin = new PerlinNoise(); // Genera una nueva semilla aleatoria cada vez
             for (int i = 0; i < 30; i++)
             {
                 for (int j = 0; j < 30; j++)
                 {
-                    matriz.Matrix[i, j].Terreno = random.Next(2) == 0 ? TipoTerreno.Tierra : TipoTerreno.Mar;
+                    double noiseValue = perlin.Generate(i * 0.1, j * 0.1); // Escala para ajustar el "zoom"
+                    matriz.Matrix[i, j].Terreno = noiseValue > 0 ? TipoTerreno.Tierra : TipoTerreno.Mar;
                 }
             }
         }
