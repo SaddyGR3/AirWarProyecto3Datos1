@@ -12,6 +12,7 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
+using System.Windows.Media.Animation;
 
 
 namespace AirWarProyecto3Datos1
@@ -29,6 +30,7 @@ namespace AirWarProyecto3Datos1
         private BitmapImage imgPortaviones;
         private BitmapImage imgAeropuerto;
         private BitmapImage imgAvion;
+        private Image imgAvionElement;
 
         //Instancias
         private Aeropuerto aeropuerto;
@@ -49,7 +51,13 @@ namespace AirWarProyecto3Datos1
             // Generar aeropuerto y portaviones antes de dibujar el mapa
             GenerarEstructuras();
             GenerarAvion();
-
+            // Crear la instancia del imgAvionElement y asignarle el BitmapImage de la imagen del avión
+            imgAvionElement = new Image
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Source = imgAvion // Asignamos el BitmapImage que cargaste en CargarImagenes
+            };
             // Configurar y empezar el temporizador para mover el avión
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(500); // Mueve el avión cada 500 ms
@@ -73,10 +81,37 @@ namespace AirWarProyecto3Datos1
 
         private void MoverAvion()
         {
-            avion.MoverAvion();
-            DibujarMapa(); // Redibuja el mapa para actualizar la posición del avión
-        }
+            Nodo nodoAnterior = avion.NodoActual;
+            avion.MoverAvion(); // Mueve el avión al siguiente nodo lógicamente
 
+            // Si existe una transición válida
+            if (nodoAnterior != null && avion.NodoActual != null)
+            {
+                int filaAnterior = matriz.GetRow(nodoAnterior);
+                int columnaAnterior = matriz.GetColumn(nodoAnterior);
+
+                int filaNueva = matriz.GetRow(avion.NodoActual);
+                int columnaNueva = matriz.GetColumn(avion.NodoActual);
+
+                // Animación en la posición X
+                DoubleAnimation animX = new DoubleAnimation
+                {
+                    From = columnaAnterior * CellSize,
+                    To = columnaNueva * CellSize,
+                    Duration = TimeSpan.FromMilliseconds(500)
+                };
+                imgAvionElement.BeginAnimation(Canvas.LeftProperty, animX);
+
+                // Animación en la posición Y
+                DoubleAnimation animY = new DoubleAnimation
+                {
+                    From = filaAnterior * CellSize,
+                    To = filaNueva * CellSize,
+                    Duration = TimeSpan.FromMilliseconds(500)
+                };
+                imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
+            }
+        }
 
 
 
@@ -155,7 +190,7 @@ namespace AirWarProyecto3Datos1
                 {
                     Nodo nodo = matriz.Matrix[i, j];
 
-                    //Terreno
+                    // Terreno
                     Rectangle rect = new Rectangle
                     {
                         Width = CellSize,
@@ -167,50 +202,46 @@ namespace AirWarProyecto3Datos1
                     Canvas.SetTop(rect, i * CellSize);
                     MapaCanvas.Children.Add(rect);
 
-                    // Si el nodo tiene un aeropuerto, agrega la imagen del aeropuerto
+                    // Agrega las imágenes de las estructuras si es necesario
                     if (nodo.TieneAeropuerto)
                     {
                         Image img = new Image
                         {
-                            Width = CellSize +20,
+                            Width = CellSize + 20,
                             Height = CellSize + 20,
                             Source = imgAeropuerto
                         };
-                        Canvas.SetLeft(img, j * CellSize-5);
-                        Canvas.SetTop(img, i * CellSize-5);
+                        Canvas.SetLeft(img, j * CellSize - 5);
+                        Canvas.SetTop(img, i * CellSize - 5);
                         MapaCanvas.Children.Add(img);
                     }
-
-                    // Si el nodo tiene un portaviones, agrega la imagen del portaviones
                     else if (nodo.TienePortaviones)
                     {
                         Image img = new Image
                         {
-                            Width = CellSize +10,
+                            Width = CellSize + 10,
                             Height = CellSize + 10,
                             Source = imgPortaviones
                         };
-                        Canvas.SetLeft(img, j * CellSize-5);
-                        Canvas.SetTop(img, i * CellSize-5);
+                        Canvas.SetLeft(img, j * CellSize - 5);
+                        Canvas.SetTop(img, i * CellSize - 5);
                         MapaCanvas.Children.Add(img);
                     }
                 }
             }
-            // Dibujar el avión en su posición actual
+
+            // Añadir imgAvionElement al Canvas en su posición inicial
             if (avion != null && avion.NodoActual != null)
             {
                 int filaAvion = matriz.GetRow(avion.NodoActual);
                 int columnaAvion = matriz.GetColumn(avion.NodoActual);
 
-                Image imgAvionElement = new Image
-                {
-                    Width = CellSize,
-                    Height = CellSize,
-                    Source = imgAvion
-                };
                 Canvas.SetLeft(imgAvionElement, columnaAvion * CellSize);
                 Canvas.SetTop(imgAvionElement, filaAvion * CellSize);
-                MapaCanvas.Children.Add(imgAvionElement);
+                if (!MapaCanvas.Children.Contains(imgAvionElement))
+                {
+                    MapaCanvas.Children.Add(imgAvionElement);
+                }
             }
         }
     }
