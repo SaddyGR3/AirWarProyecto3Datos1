@@ -56,8 +56,12 @@ namespace AirWarProyecto3Datos1
             {
                 Width = CellSize,
                 Height = CellSize,
-                Source = imgAvion // Asignamos el BitmapImage que cargaste en CargarImagenes
+                Source = imgAvion 
             };
+
+            // Agrega la transformación de rotación
+            imgAvionElement.RenderTransform = new RotateTransform(0);
+            imgAvionElement.RenderTransformOrigin = new Point(0.5, 0.5);
             // Configurar y empezar el temporizador para mover el avión
             timer = new DispatcherTimer();
             timer.Interval = TimeSpan.FromMilliseconds(500); // Mueve el avión cada 500 ms
@@ -82,18 +86,31 @@ namespace AirWarProyecto3Datos1
         private void MoverAvion()
         {
             Nodo nodoAnterior = avion.NodoActual;
-            avion.MoverAvion(); // Mueve el avión al siguiente nodo lógicamente
+            avion.MoverAvion();
 
-            // Si existe una transición válida
             if (nodoAnterior != null && avion.NodoActual != null)
             {
                 int filaAnterior = matriz.GetRow(nodoAnterior);
                 int columnaAnterior = matriz.GetColumn(nodoAnterior);
-
                 int filaNueva = matriz.GetRow(avion.NodoActual);
                 int columnaNueva = matriz.GetColumn(avion.NodoActual);
 
-                // Animación en la posición X
+                if (!MapaCanvas.Children.Contains(imgAvionElement))
+                {
+                    MapaCanvas.Children.Add(imgAvionElement);
+                }
+
+                // Rotación basada en la dirección del movimiento
+                double angle = CalcularAnguloRotacion(columnaAnterior, filaAnterior, columnaNueva, filaNueva);
+                RotateTransform rotateTransform = imgAvionElement.RenderTransform as RotateTransform;
+                DoubleAnimation animRotation = new DoubleAnimation
+                {
+                    To = angle,
+                    Duration = TimeSpan.FromMilliseconds(250) // Para rotar sin perder el movimiento fluido
+                };
+                rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animRotation);
+
+                // Movimiento X y Y con animaciones para mantener la fluidez
                 DoubleAnimation animX = new DoubleAnimation
                 {
                     From = columnaAnterior * CellSize,
@@ -102,7 +119,6 @@ namespace AirWarProyecto3Datos1
                 };
                 imgAvionElement.BeginAnimation(Canvas.LeftProperty, animX);
 
-                // Animación en la posición Y
                 DoubleAnimation animY = new DoubleAnimation
                 {
                     From = filaAnterior * CellSize,
@@ -114,9 +130,32 @@ namespace AirWarProyecto3Datos1
         }
 
 
+        // Método para calcular el ángulo de rotación
+        private double CalcularAngulo(int filaAnterior, int columnaAnterior, int filaNueva, int columnaNueva)
+        {
+            int deltaX = columnaNueva - columnaAnterior;
+            int deltaY = filaNueva - filaAnterior;
 
+            // Calcula el ángulo en grados
+            double angulo = Math.Atan2(deltaY, deltaX) * (180 / Math.PI);
+            return angulo;
+        }
 
+        private double CalcularAnguloRotacion(int x1, int y1, int x2, int y2)
+        {
+            int dx = x2 - x1;
+            int dy = y2 - y1;
 
+            if (dx == 1 && dy == 0) return 90;   // Este
+            if (dx == -1 && dy == 0) return 270; // Oeste
+            if (dx == 0 && dy == 1) return 180;  // Sur
+            if (dx == 0 && dy == -1) return 0;   // Norte
+            if (dx == 1 && dy == -1) return 45;  // Noreste
+            if (dx == 1 && dy == 1) return 135;  // Sureste
+            if (dx == -1 && dy == -1) return 315; // Noroeste
+            if (dx == -1 && dy == 1) return 225;  // Suroeste
+            return 0; // Default a norte
+        }
 
 
 
