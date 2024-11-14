@@ -41,6 +41,32 @@ namespace AirWarProyecto3Datos1.LogicaCentral
                 }
             }
         }
+
+        public int GetRow(Nodo nodo)
+        {
+            for (int i = 0; i < Matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < Matrix.GetLength(1); j++)
+                {
+                    if (Matrix[i, j] == nodo)
+                        return i;
+                }
+            }
+            return -1; // Retorna -1 si no se encuentra el nodo
+        }
+
+        public int GetColumn(Nodo nodo)
+        {
+            for (int i = 0; i < Matrix.GetLength(0); i++)
+            {
+                for (int j = 0; j < Matrix.GetLength(1); j++)
+                {
+                    if (Matrix[i, j] == nodo)
+                        return j;
+                }
+            }
+            return -1; // Retorna -1 si no se encuentra el nodo
+        }
         //Metodo para obtener un nodo especifico de la matriz
         public Nodo GetNode(int row, int col)
         {

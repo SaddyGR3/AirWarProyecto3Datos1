@@ -8,4 +8,22 @@
     <UseWPF>true</UseWPF>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Remove="Imagenes\Aeropuerto.png" />
+    <None Remove="Imagenes\Avion.png" />
+    <None Remove="Imagenes\portaviones.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Imagenes\Aeropuerto.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Imagenes\Avion.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+    <Resource Include="Imagenes\portaviones.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Resource>
+  </ItemGroup>
+
 </Project>

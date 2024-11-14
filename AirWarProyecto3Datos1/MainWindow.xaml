@@ -5,8 +5,8 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:AirWarProyecto3Datos1"
         mc:Ignorable="d"
-        Title="AirWar - Mapa" Height="650" Width="650">
+        Title="AirWar - Mapa" Height="900" Width="900">
     <Grid>
-        <Canvas Name="MapaCanvas" Width="600" Height="600" Background="LightGray"/>
+        <Canvas Name="MapaCanvas" Width="900" Height="900" Background="LightGray"/>
     </Grid>
 </Window>
