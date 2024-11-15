@@ -12,28 +12,43 @@ namespace AirWarProyecto3Datos1.Airplane
     {
         public Nodo NodoActual { get; private set; }
         public List<Nodo> Ruta { get; private set; }
+        public Nodo Destino { get; private set; }
         private Matriz matriz;
+        public bool HaLlegadoADestino { get; private set; }
 
 
-        public Avion(Nodo nodoInicial, Nodo destino, Matriz matriz)
+        public Avion(Nodo nodoInicial, Matriz matriz)
         {
             NodoActual = nodoInicial;
             NodoActual.TieneAvion = true;
             this.matriz = matriz;
+            Ruta = new List<Nodo>();
+            HaLlegadoADestino = false;
 
-            // Genera la ruta recta desde el nodoInicial hasta el destino
-            int filaInicio = matriz.GetRow(nodoInicial);
-            int columnaInicio = matriz.GetColumn(nodoInicial);
-            int filaDestino = matriz.GetRow(destino);
-            int columnaDestino = matriz.GetColumn(destino);
+        }
 
-            Ruta = CalcularRutaRecta(filaInicio, columnaInicio, filaDestino, columnaDestino);
-
+        // Método para asignar destino y calcular la ruta
+        public void AsignarDestino(Nodo destino)
+        {
+            Destino = destino;
+            if (Destino != null)
+            {
+                int filaInicio = matriz.GetRow(NodoActual);
+                int columnaInicio = matriz.GetColumn(NodoActual);
+                int filaDestino = matriz.GetRow(destino);
+                int columnaDestino = matriz.GetColumn(destino);
+                Ruta = CalcularRutaRecta(filaInicio, columnaInicio, filaDestino, columnaDestino);
+            }
         }
 
         // Mover el avión al siguiente nodo de la ruta
         public void MoverAvion()
         {
+            if (HaLlegadoADestino || NodoActual == Destino)
+            {
+                HaLlegadoADestino = true;
+                return;
+            }
             if (Ruta.Count > 0)
             {
                 NodoActual.TieneAvion = false; // Marcar el nodo actual como sin avión

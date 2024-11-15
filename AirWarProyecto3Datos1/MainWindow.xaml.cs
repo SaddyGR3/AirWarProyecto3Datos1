@@ -33,11 +33,17 @@ namespace AirWarProyecto3Datos1
         private Image imgAvionElement;
 
         //Instancias
-        private Aeropuerto aeropuerto;
-        private Portaviones portaviones;
+        private List<Aeropuerto> aeropuertos;
+        private List<Portaviones> portaviones;
         private Avion avion;
 
         private DispatcherTimer timer;
+        private DispatcherTimer timerCreacionAvion;
+
+        private List<Nodo> posicionesAeropuertos;
+        private List<Nodo> posicionesPortaviones;
+        // Lista para almacenar imágenes de cada avión en el mapa
+        private Dictionary<Avion, Image> imagenesAviones = new Dictionary<Avion, Image>();
 
 
         public MainWindow()
@@ -47,10 +53,9 @@ namespace AirWarProyecto3Datos1
             matriz = new Matriz(30, 30); // Matriz de 30x30
             GenerarTerrenoPerlin();
             CargarImagenes(); // Cargar las imágenes una sola vez
-  
-            // Generar aeropuerto y portaviones antes de dibujar el mapa
-            GenerarEstructuras();
-            GenerarAvion();
+
+            aeropuertos = new List<Aeropuerto>();
+            portaviones = new List<Portaviones>();
             // Crear la instancia del imgAvionElement y asignarle el BitmapImage de la imagen del avión
             imgAvionElement = new Image
             {
@@ -59,14 +64,34 @@ namespace AirWarProyecto3Datos1
                 Source = imgAvion 
             };
 
+            // Agrega imgAvionElement al Canvas al inicio
+            if (!MapaCanvas.Children.Contains(imgAvionElement))
+            {
+                MapaCanvas.Children.Add(imgAvionElement);
+            }
+
+            posicionesAeropuertos = new List<Nodo>();
+            posicionesPortaviones = new List<Nodo>();
+            // Generar aeropuerto y portaviones antes de dibujar el mapa
+            GenerarEstructuras();
+            GenerarAvion();
+
+            // Temporizador para creación de aviones
+            timerCreacionAvion = new DispatcherTimer();
+            timerCreacionAvion.Interval = TimeSpan.FromSeconds(10);
+            timerCreacionAvion.Tick += (s, e) => GenerarAvion();
+            timerCreacionAvion.Start();
+
             // Agrega la transformación de rotación
             imgAvionElement.RenderTransform = new RotateTransform(0);
             imgAvionElement.RenderTransformOrigin = new Point(0.5, 0.5);
-            // Configurar y empezar el temporizador para mover el avión
+
+            // Temporizador de animación de movimiento
             timer = new DispatcherTimer();
-            timer.Interval = TimeSpan.FromMilliseconds(500); // Mueve el avión cada 500 ms
-            timer.Tick += (s, e) => MoverAvion();
+            timer.Interval = TimeSpan.FromMilliseconds(500);
+            timer.Tick += (s, e) => MoverAviones();
             timer.Start();
+
 
             DibujarMapa();
         }
@@ -74,56 +99,115 @@ namespace AirWarProyecto3Datos1
         /// </summary>
         /// Logica del Avion
         /// </summary>
-
         private void GenerarAvion()
         {
-            if (aeropuerto != null && portaviones != null)
+            System.Diagnostics.Debug.WriteLine("Intentando generar un avión en algún aeropuerto...");
+
+            foreach (var aeropuerto in aeropuertos)
             {
-                avion = new Avion(aeropuerto.Ubicacion, portaviones.Ubicacion, matriz);
+                if (aeropuerto.HayEspacioEnHangar() && aeropuerto.PuedeConstruirAvion())
+                {
+                    Avion nuevoAvion = aeropuerto.CrearAvion(matriz); // Crear el avión
+                    if (nuevoAvion != null)
+                    {
+                        System.Diagnostics.Debug.WriteLine($"Avión creado en aeropuerto: {aeropuerto}");
+                        Nodo destino = AsignarDestinoAleatorio(nuevoAvion);
+                        System.Diagnostics.Debug.WriteLine($"Destino asignado al avión: {destino}");
+
+                        aeropuerto.DespegarAvion(nuevoAvion, destino); // Despegar el avión hacia el destino
+                        DibujarAvion(nuevoAvion); // Dibujar este avión específico en el mapa
+                    }
+                    return; // Salimos del método tras crear un avión, limitando a uno por ciclo
+                }
             }
+
+            System.Diagnostics.Debug.WriteLine("No se creó el avión: ningún aeropuerto disponible.");
+        }
+        private void DibujarAvion(Avion avion)
+        {
+            // Crear una nueva imagen para este avión
+            Image imgAvionInstance = new Image
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Source = imgAvion,
+                RenderTransformOrigin = new Point(0.5, 0.5),
+                RenderTransform = new RotateTransform(0)
+            };
+
+            int fila = matriz.GetRow(avion.NodoActual);
+            int columna = matriz.GetColumn(avion.NodoActual);
+
+            Canvas.SetLeft(imgAvionInstance, columna * CellSize);
+            Canvas.SetTop(imgAvionInstance, fila * CellSize);
+
+            MapaCanvas.Children.Add(imgAvionInstance);
+
+            // Asociar esta imagen con el avión en el diccionario
+            imagenesAviones[avion] = imgAvionInstance;
         }
 
-        private void MoverAvion()
+        private Nodo AsignarDestinoAleatorio(Avion avion)
         {
-            Nodo nodoAnterior = avion.NodoActual;
-            avion.MoverAvion();
+            System.Diagnostics.Debug.WriteLine("Asignando destino aleatorio al avión...");
+            var destinosPosibles = posicionesAeropuertos.Concat(posicionesPortaviones)
+                                     .Where(destino => destino != avion.NodoActual).ToList();
 
-            if (nodoAnterior != null && avion.NodoActual != null)
+            System.Diagnostics.Debug.WriteLine("Cantidad de destinos posibles: " + destinosPosibles.Count);
+
+            Random random = new Random();
+            int indiceDestino = random.Next(destinosPosibles.Count);
+            Nodo destino = destinosPosibles[indiceDestino];
+            System.Diagnostics.Debug.WriteLine("Destino seleccionado: " + destino);
+
+            return destino;
+        }
+
+        private void MoverAviones()
+        {
+            foreach (var avion in imagenesAviones.Keys.ToList()) // Itera sobre los aviones existentes
             {
+                Nodo nodoAnterior = avion.NodoActual;
+                avion.MoverAvion();
+
+                if (avion.HaLlegadoADestino)
+                {
+                    System.Diagnostics.Debug.WriteLine("El avión ha llegado a su destino.");
+                    continue;
+                }
+
                 int filaAnterior = matriz.GetRow(nodoAnterior);
                 int columnaAnterior = matriz.GetColumn(nodoAnterior);
                 int filaNueva = matriz.GetRow(avion.NodoActual);
                 int columnaNueva = matriz.GetColumn(avion.NodoActual);
 
-                if (!MapaCanvas.Children.Contains(imgAvionElement))
-                {
-                    MapaCanvas.Children.Add(imgAvionElement);
-                }
-
-                // Rotación basada en la dirección del movimiento
                 double angle = CalcularAnguloRotacion(columnaAnterior, filaAnterior, columnaNueva, filaNueva);
+                var imgAvionElement = imagenesAviones[avion];
                 RotateTransform rotateTransform = imgAvionElement.RenderTransform as RotateTransform;
+
+                // Animación de rotación
                 DoubleAnimation animRotation = new DoubleAnimation
                 {
                     To = angle,
-                    Duration = TimeSpan.FromMilliseconds(250) // Para rotar sin perder el movimiento fluido
+                    Duration = TimeSpan.FromMilliseconds(250) // Duración de la animación de rotación
                 };
                 rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animRotation);
 
-                // Movimiento X y Y con animaciones para mantener la fluidez
+                // Animación de movimiento en X (izquierda-derecha)
                 DoubleAnimation animX = new DoubleAnimation
                 {
                     From = columnaAnterior * CellSize,
                     To = columnaNueva * CellSize,
-                    Duration = TimeSpan.FromMilliseconds(500)
+                    Duration = TimeSpan.FromMilliseconds(500) // Duración de la animación de movimiento en X
                 };
                 imgAvionElement.BeginAnimation(Canvas.LeftProperty, animX);
 
+                // Animación de movimiento en Y (arriba-abajo)
                 DoubleAnimation animY = new DoubleAnimation
                 {
                     From = filaAnterior * CellSize,
                     To = filaNueva * CellSize,
-                    Duration = TimeSpan.FromMilliseconds(500)
+                    Duration = TimeSpan.FromMilliseconds(500) // Duración de la animación de movimiento en Y
                 };
                 imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
             }
@@ -168,6 +252,7 @@ namespace AirWarProyecto3Datos1
             imgPortaviones = new BitmapImage(new Uri("Imagenes/portaviones.png", UriKind.Relative));
             imgAeropuerto = new BitmapImage(new Uri("Imagenes/Aeropuerto.png", UriKind.Relative));
             imgAvion = new BitmapImage(new Uri("Imagenes/Avion.png", UriKind.Relative));
+            System.Diagnostics.Debug.WriteLine("Imagen del avión cargada: " + (imgAvion != null));
         }
 
         public void GenerarTerrenoPerlin()
@@ -183,39 +268,51 @@ namespace AirWarProyecto3Datos1
             }
         }
 
+        // Modificación en el método GenerarEstructuras para generar 2 aeropuertos y 2 portaviones:
         private void GenerarEstructuras()
         {
             Random random = new Random();
+            int aeropuertosGenerados = 0;
+            int portavionesGenerados = 0;
 
-            // Generar un aeropuerto en un nodo de tierra que no esté en los bordes
-            bool aeropuertoGenerado = false;
-            while (!aeropuertoGenerado)
+            posicionesAeropuertos.Clear();
+            posicionesPortaviones.Clear();
+            aeropuertos.Clear();
+            portaviones.Clear();
+
+            // Generar aeropuertos en nodos de tierra
+            while (aeropuertosGenerados < 2)
             {
-                int x = random.Next(1, 29); // Rango de 1 a 28 para evitar los bordes
+                int x = random.Next(1, 29);
                 int y = random.Next(1, 29);
-
                 Nodo nodo = matriz.Matrix[x, y];
                 if (nodo.Terreno == TipoTerreno.Tierra && !nodo.TieneAeropuerto)
                 {
-                    aeropuerto = new Aeropuerto(nodo);
+                    var nuevoAeropuerto = new Aeropuerto(nodo);
                     nodo.TieneAeropuerto = true;
-                    aeropuertoGenerado = true;
+                    aeropuertos.Add(nuevoAeropuerto);
+                    aeropuertosGenerados++;
+
+                    // Agregar la posición del aeropuerto a la lista de posiciones de aeropuertos
+                    posicionesAeropuertos.Add(nodo);
                 }
             }
 
-            // Generar un portaviones en un nodo de agua que no esté en los bordes
-            bool portavionesGenerado = false;
-            while (!portavionesGenerado)
+            // Generar portaviones en nodos de agua
+            while (portavionesGenerados < 2)
             {
-                int x = random.Next(1, 29); // Rango de 1 a 28 para evitar los bordes
+                int x = random.Next(1, 29);
                 int y = random.Next(1, 29);
-
                 Nodo nodo = matriz.Matrix[x, y];
                 if (nodo.Terreno == TipoTerreno.Mar && !nodo.TienePortaviones)
                 {
-                    portaviones = new Portaviones(nodo);
+                    var nuevoPortaviones = new Portaviones(nodo);
                     nodo.TienePortaviones = true;
-                    portavionesGenerado = true;
+                    portaviones.Add(nuevoPortaviones);
+                    portavionesGenerados++;
+
+                    // Agregar la posición del portaviones a la lista de posiciones de portaviones
+                    posicionesPortaviones.Add(nodo);
                 }
             }
         }
