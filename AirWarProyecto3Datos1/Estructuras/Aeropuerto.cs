@@ -24,6 +24,7 @@ namespace AirWarProyecto3Datos1.Estructuras
                 Ubicacion = ubicacion;
                 Ubicacion.TieneAeropuerto = true; // Marca el nodo con el aeropuerto
                 ultimoTiempoConstruccion = DateTime.MinValue; // Inicializar en un valor mínimo
+                Ubicacion.Elemento = this;
             }
             else
             {
@@ -43,10 +44,11 @@ namespace AirWarProyecto3Datos1.Estructuras
             if (HayEspacioEnHangar())
             {
                 avionesEnHangar++;
+                System.Diagnostics.Debug.WriteLine($"Avión aterrizó en {Nombre}. Aviones en hangar: {avionesEnHangar}.");
             }
             else
             {
-               
+                System.Diagnostics.Debug.WriteLine($"Hangar del aeropuerto {Nombre} lleno. Avión no puede aterrizar.");
             }
         }
         public void AvionDespega()
@@ -60,17 +62,25 @@ namespace AirWarProyecto3Datos1.Estructuras
                 
             }
         }
-        public void DespegarAvion(Avion avion, Nodo destino)
+        public void DespegarAvion(Avion avion)
         {
-            avion.AsignarDestino(destino);
-            AvionDespega(); // Resta uno del hangar al despegar
+            if (avionesEnHangar > 0 && avion != null)
+            {
+                AvionDespega(); // Reduce el contador de aviones en el hangar
+                System.Diagnostics.Debug.WriteLine($"El avión despegó del aeropuerto {Nombre} hacia su destino: {avion.Destino.Data}.");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine($"No se pudo despegar el avión desde {Nombre}. Verifica el hangar o la instancia del avión.");
+            }
         }
-        public Avion CrearAvion(Matriz matriz)
+
+        public Avion CrearAvion(Matriz matriz, List<Nodo> DestinosPosibles)
         {
             if (!HayEspacioEnHangar() || !PuedeConstruirAvion())
                 throw new InvalidOperationException("No se puede construir un avión en este momento.");
 
-            Avion nuevoAvion = new Avion(Ubicacion, matriz);
+            Avion nuevoAvion = new Avion(Ubicacion, matriz, DestinosPosibles);
             AvionAterriza(); // Añade uno al hangar al crearse
             ultimoTiempoConstruccion = DateTime.Now; // Actualiza el tiempo de construcción
             return nuevoAvion;

@@ -23,6 +23,7 @@ namespace AirWarProyecto3Datos1.LogicaCentral
         public bool TienePortaviones { get; set; }
         public bool TieneBala { get; set; }
         public int PesoRuta { get; set; }
+        public object Elemento { get; set; }
 
         public Nodo()
         {
@@ -41,7 +42,8 @@ namespace AirWarProyecto3Datos1.LogicaCentral
             TienePortaviones = false;
             TieneBala = false;
             PesoRuta = 0; //cada nodo tendra un peso de ruta,inicialmente puede ser 1 si es tierra, 2 si es agua.
-            
+            Elemento = null;
+
         }
     }
 }

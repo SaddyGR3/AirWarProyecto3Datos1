@@ -1,4 +1,5 @@
-﻿using AirWarProyecto3Datos1.LogicaCentral;
+﻿using AirWarProyecto3Datos1.Estructuras;
+using AirWarProyecto3Datos1.LogicaCentral;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,50 +16,133 @@ namespace AirWarProyecto3Datos1.Airplane
         public Nodo Destino { get; private set; }
         private Matriz matriz;
         public bool HaLlegadoADestino { get; private set; }
+        public Aeropuerto AeropuertoActual { get; private set; }
+        private List<Nodo> DestinosPosibles { get; set; }
+        public Portaviones PortavionesActual { get; private set; }
+        public bool Activo { get; private set; }
 
 
-        public Avion(Nodo nodoInicial, Matriz matriz)
+        public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles)
         {
             NodoActual = nodoInicial;
             NodoActual.TieneAvion = true;
+            DestinosPosibles = destinosPosibles;
             this.matriz = matriz;
+            Activo = true;
             Ruta = new List<Nodo>();
             HaLlegadoADestino = false;
-
         }
 
-        // Método para asignar destino y calcular la ruta
-        public void AsignarDestino(Nodo destino)
+        // Asignar un destino aleatorio desde los disponibles
+        public void AsignarDestinoAleatorio()
         {
-            Destino = destino;
-            if (Destino != null)
+            var destinosDisponibles = DestinosPosibles
+                .Where(destino => destino != NodoActual)
+                .ToList();
+
+            if (!destinosDisponibles.Any())
+                throw new InvalidOperationException("No hay destinos disponibles.");
+
+            Random random = new Random();
+            int indiceDestino = random.Next(destinosDisponibles.Count);
+            Destino = destinosDisponibles[indiceDestino];
+            CalcularRutaHaciaDestino();
+
+            System.Diagnostics.Debug.WriteLine($"Destino asignado: {Destino.Data}. Ruta calculada: {Ruta.Count} nodos.");
+        }
+
+        // Método para procesar aterrizaje y despegar automáticamente después de un tiempo
+        public async Task ProcesarAterrizajeAsync()
+        {
+            if (!Activo) return; // Validar si el avión aún está activo
+
+            if (Destino.TieneAeropuerto && Destino.Elemento is Aeropuerto aeropuertoDestino)
             {
-                int filaInicio = matriz.GetRow(NodoActual);
-                int columnaInicio = matriz.GetColumn(NodoActual);
-                int filaDestino = matriz.GetRow(destino);
-                int columnaDestino = matriz.GetColumn(destino);
-                Ruta = CalcularRutaRecta(filaInicio, columnaInicio, filaDestino, columnaDestino);
+                NodoActual.TieneAvion = false;
+                aeropuertoDestino.AvionAterriza();
+                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el aeropuerto {aeropuertoDestino.Nombre}.");
             }
-        }
-
-        // Mover el avión al siguiente nodo de la ruta
-        public void MoverAvion()
-        {
-            if (HaLlegadoADestino || NodoActual == Destino)
+            else if (Destino.TienePortaviones && Destino.Elemento is Portaviones portavionesDestino)
             {
-                HaLlegadoADestino = true;
+                NodoActual.TieneAvion = false;
+                portavionesDestino.AvionAterriza();
+                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el portaviones {portavionesDestino.Nombre}.");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("El destino no es un aeropuerto o portaviones válido.");
                 return;
             }
-            if (Ruta.Count > 0)
+
+            // Esperar antes de despegar
+            await Task.Delay(TimeSpan.FromSeconds(5));
+
+            // Verificar nuevamente antes de asignar destino
+            if (Activo)
             {
-                NodoActual.TieneAvion = false; // Marcar el nodo actual como sin avión
-                NodoActual = Ruta[0];
-                NodoActual.TieneAvion = true; // Marcar el nuevo nodo con el avión
-                Ruta.RemoveAt(0); // Avanza en la ruta
+                AvisoDespegue();
             }
         }
-        // Método para calcular la ruta recta hacia el destino
 
+
+        private void AvisoDespegue()
+        {
+            if (Destino.TieneAeropuerto && Destino.Elemento is Aeropuerto aeropuertoDestino)
+            {
+                aeropuertoDestino.AvionDespega();
+                AsignarDestinoAleatorio();
+                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el aeropuerto {aeropuertoDestino.Nombre}.");
+            }
+            else if (Destino.TienePortaviones && Destino.Elemento is Portaviones portavionesDestino)
+            {
+                portavionesDestino.AvionDespega();
+                AsignarDestinoAleatorio();
+                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el portaviones {portavionesDestino.Nombre}.");
+            }
+
+        }
+        // Calcular la ruta hacia el destino asignado
+        private void CalcularRutaHaciaDestino()
+        {
+            if (Destino == null)
+                throw new InvalidOperationException("El destino no está asignado.");
+
+            int filaInicio = matriz.GetRow(NodoActual);
+            int columnaInicio = matriz.GetColumn(NodoActual);
+            int filaDestino = matriz.GetRow(Destino);
+            int columnaDestino = matriz.GetColumn(Destino);
+
+            Ruta = CalcularRutaRecta(filaInicio, columnaInicio, filaDestino, columnaDestino);
+        }
+
+        public void MoverAvion()
+        {
+            if (!Activo)
+            {
+                System.Diagnostics.Debug.WriteLine("El avión está inactivo y no puede moverse.");
+                return;
+            }
+
+            if (Ruta.Count > 0)
+            {
+                NodoActual.TieneAvion = false;
+                NodoActual = Ruta[0];
+                NodoActual.TieneAvion = true;
+                Ruta.RemoveAt(0);
+
+                if (Ruta.Count == 0)
+                {
+                    HaLlegadoADestino = true;
+                    Task.Run(() => ProcesarAterrizajeAsync());
+                }
+            }
+            else
+            {
+               
+            }
+        }
+
+        // Método para calcular la ruta recta hacia el destino
         private List<Nodo> CalcularRutaRecta(int filaInicio, int columnaInicio, int filaDestino, int columnaDestino)
         {
             List<Nodo> ruta = new List<Nodo>();
@@ -78,6 +162,7 @@ namespace AirWarProyecto3Datos1.Airplane
             }
             return ruta;
         }
+
         // Método para obtener el siguiente nodo en la dirección hacia el destino
         private Nodo ObtenerSiguienteNodoEnDireccion(Nodo actual, Nodo destino)
         {

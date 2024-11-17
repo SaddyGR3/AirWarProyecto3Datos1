@@ -35,6 +35,8 @@ namespace AirWarProyecto3Datos1
         //Instancias
         private List<Aeropuerto> aeropuertos;
         private List<Portaviones> portaviones;
+        private List<Nodo> destinosPosibles;
+        private List<Avion> avionesActivos = new List<Avion>();
         private Avion avion;
 
         private DispatcherTimer timer;
@@ -107,17 +109,20 @@ namespace AirWarProyecto3Datos1
             {
                 if (aeropuerto.HayEspacioEnHangar() && aeropuerto.PuedeConstruirAvion())
                 {
-                    Avion nuevoAvion = aeropuerto.CrearAvion(matriz); // Crear el avión
+                    Avion nuevoAvion = aeropuerto.CrearAvion(matriz, destinosPosibles); // Crear el avión
                     if (nuevoAvion != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Avión creado en aeropuerto: {aeropuerto}");
-                        Nodo destino = AsignarDestinoAleatorio(nuevoAvion);
-                        System.Diagnostics.Debug.WriteLine($"Destino asignado al avión: {destino}");
+                        System.Diagnostics.Debug.WriteLine($"Avión creado en aeropuerto: {aeropuerto.Nombre}");
+                        avionesActivos.Add(nuevoAvion);
+                        // Asignar el destino automáticamente y despegar
+                        nuevoAvion.AsignarDestinoAleatorio();
+                        aeropuerto.DespegarAvion(nuevoAvion);
 
-                        aeropuerto.DespegarAvion(nuevoAvion, destino); // Despegar el avión hacia el destino
-                        DibujarAvion(nuevoAvion); // Dibujar este avión específico en el mapa
+                        // Dibujar el avión en el mapa
+                        DibujarAvion(nuevoAvion);
+
+                        return; // Salimos del método tras crear y despegar un avión
                     }
-                    return; // Salimos del método tras crear un avión, limitando a uno por ciclo
                 }
             }
 
@@ -147,70 +152,66 @@ namespace AirWarProyecto3Datos1
             imagenesAviones[avion] = imgAvionInstance;
         }
 
-        private Nodo AsignarDestinoAleatorio(Avion avion)
-        {
-            System.Diagnostics.Debug.WriteLine("Asignando destino aleatorio al avión...");
-            var destinosPosibles = posicionesAeropuertos.Concat(posicionesPortaviones)
-                                     .Where(destino => destino != avion.NodoActual).ToList();
 
-            System.Diagnostics.Debug.WriteLine("Cantidad de destinos posibles: " + destinosPosibles.Count);
-
-            Random random = new Random();
-            int indiceDestino = random.Next(destinosPosibles.Count);
-            Nodo destino = destinosPosibles[indiceDestino];
-            System.Diagnostics.Debug.WriteLine("Destino seleccionado: " + destino);
-
-            return destino;
-        }
 
         private void MoverAviones()
         {
-            foreach (var avion in imagenesAviones.Keys.ToList()) // Itera sobre los aviones existentes
+            if (avionesActivos.Count == 0)
             {
+                System.Diagnostics.Debug.WriteLine("No hay aviones activos para mover.");
+                return;
+            }
+
+            foreach (var avion in avionesActivos)
+            {
+                if (avion == null || !avion.Activo) continue; // Seguridad adicional
+
                 Nodo nodoAnterior = avion.NodoActual;
                 avion.MoverAvion();
 
-                if (avion.HaLlegadoADestino)
+                if (imagenesAviones.ContainsKey(avion))
                 {
-                    System.Diagnostics.Debug.WriteLine("El avión ha llegado a su destino.");
-                    continue;
+                    ActualizarAnimacionAvion(avion, nodoAnterior);
                 }
-
-                int filaAnterior = matriz.GetRow(nodoAnterior);
-                int columnaAnterior = matriz.GetColumn(nodoAnterior);
-                int filaNueva = matriz.GetRow(avion.NodoActual);
-                int columnaNueva = matriz.GetColumn(avion.NodoActual);
-
-                double angle = CalcularAnguloRotacion(columnaAnterior, filaAnterior, columnaNueva, filaNueva);
-                var imgAvionElement = imagenesAviones[avion];
-                RotateTransform rotateTransform = imgAvionElement.RenderTransform as RotateTransform;
-
-                // Animación de rotación
-                DoubleAnimation animRotation = new DoubleAnimation
-                {
-                    To = angle,
-                    Duration = TimeSpan.FromMilliseconds(250) // Duración de la animación de rotación
-                };
-                rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animRotation);
-
-                // Animación de movimiento en X (izquierda-derecha)
-                DoubleAnimation animX = new DoubleAnimation
-                {
-                    From = columnaAnterior * CellSize,
-                    To = columnaNueva * CellSize,
-                    Duration = TimeSpan.FromMilliseconds(500) // Duración de la animación de movimiento en X
-                };
-                imgAvionElement.BeginAnimation(Canvas.LeftProperty, animX);
-
-                // Animación de movimiento en Y (arriba-abajo)
-                DoubleAnimation animY = new DoubleAnimation
-                {
-                    From = filaAnterior * CellSize,
-                    To = filaNueva * CellSize,
-                    Duration = TimeSpan.FromMilliseconds(500) // Duración de la animación de movimiento en Y
-                };
-                imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
             }
+        }
+
+        private void ActualizarAnimacionAvion(Avion avion, Nodo nodoAnterior)
+        {
+            int filaAnterior = matriz.GetRow(nodoAnterior);
+            int columnaAnterior = matriz.GetColumn(nodoAnterior);
+            int filaNueva = matriz.GetRow(avion.NodoActual);
+            int columnaNueva = matriz.GetColumn(avion.NodoActual);
+
+            var imgAvionElement = imagenesAviones[avion];
+            double angle = CalcularAnguloRotacion(columnaAnterior, filaAnterior, columnaNueva, filaNueva);
+            RotateTransform rotateTransform = imgAvionElement.RenderTransform as RotateTransform;
+
+            // Animación de rotación
+            DoubleAnimation animRotation = new DoubleAnimation
+            {
+                To = angle,
+                Duration = TimeSpan.FromMilliseconds(250)
+            };
+            rotateTransform.BeginAnimation(RotateTransform.AngleProperty, animRotation);
+
+            // Animación de movimiento en X
+            DoubleAnimation animX = new DoubleAnimation
+            {
+                From = columnaAnterior * CellSize,
+                To = columnaNueva * CellSize,
+                Duration = TimeSpan.FromMilliseconds(500)
+            };
+            imgAvionElement.BeginAnimation(Canvas.LeftProperty, animX);
+
+            // Animación de movimiento en Y
+            DoubleAnimation animY = new DoubleAnimation
+            {
+                From = filaAnterior * CellSize,
+                To = filaNueva * CellSize,
+                Duration = TimeSpan.FromMilliseconds(500)
+            };
+            imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
         }
 
 
@@ -275,8 +276,7 @@ namespace AirWarProyecto3Datos1
             int aeropuertosGenerados = 0;
             int portavionesGenerados = 0;
 
-            posicionesAeropuertos.Clear();
-            posicionesPortaviones.Clear();
+            destinosPosibles = new List<Nodo>();
             aeropuertos.Clear();
             portaviones.Clear();
 
@@ -291,10 +291,8 @@ namespace AirWarProyecto3Datos1
                     var nuevoAeropuerto = new Aeropuerto(nodo);
                     nodo.TieneAeropuerto = true;
                     aeropuertos.Add(nuevoAeropuerto);
+                    destinosPosibles.Add(nodo); // Agregar a la lista única
                     aeropuertosGenerados++;
-
-                    // Agregar la posición del aeropuerto a la lista de posiciones de aeropuertos
-                    posicionesAeropuertos.Add(nodo);
                 }
             }
 
@@ -309,10 +307,8 @@ namespace AirWarProyecto3Datos1
                     var nuevoPortaviones = new Portaviones(nodo);
                     nodo.TienePortaviones = true;
                     portaviones.Add(nuevoPortaviones);
+                    destinosPosibles.Add(nodo); // Agregar a la lista única
                     portavionesGenerados++;
-
-                    // Agregar la posición del portaviones a la lista de posiciones de portaviones
-                    posicionesPortaviones.Add(nodo);
                 }
             }
         }
