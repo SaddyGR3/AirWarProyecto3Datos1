@@ -17,6 +17,10 @@ namespace AirWarProyecto3Datos1.Estructuras
         private DateTime ultimoTiempoConstruccion;
         private const int cooldownConstruccionSegundos = 10;
 
+        // Reserva de combustible
+        private const int capacidadMaximaCombustible = 10000;
+        private int reservaCombustible = capacidadMaximaCombustible;
+
         public Aeropuerto(Nodo ubicacion)
         {
             if (ubicacion.Terreno == TipoTerreno.Tierra)
@@ -39,11 +43,23 @@ namespace AirWarProyecto3Datos1.Estructuras
         {
             return (DateTime.Now - ultimoTiempoConstruccion).TotalSeconds >= cooldownConstruccionSegundos;
         }
-        public void AvionAterriza()
+        public void AvionAterriza(Avion avion)
         {
             if (HayEspacioEnHangar())
             {
                 avionesEnHangar++;
+                // Distribuir combustible al avión (2 de cada 3 aviones)
+                if (new Random().Next(3) < 2 && reservaCombustible > 0)
+                {
+                    int combustibleDistribuido = new Random().Next(200, 501);
+                    if (combustibleDistribuido > reservaCombustible)
+                        combustibleDistribuido = reservaCombustible;
+
+                    avion.RecargarCombustible(combustibleDistribuido);
+                    reservaCombustible -= combustibleDistribuido;
+
+                    System.Diagnostics.Debug.WriteLine($"Se suministraron {combustibleDistribuido} de combustible al avión.");
+                }
                 System.Diagnostics.Debug.WriteLine($"Avión aterrizó en {Nombre}. Aviones en hangar: {avionesEnHangar}.");
             }
             else
@@ -81,9 +97,11 @@ namespace AirWarProyecto3Datos1.Estructuras
                 throw new InvalidOperationException("No se puede construir un avión en este momento.");
 
             Avion nuevoAvion = new Avion(Ubicacion, matriz, DestinosPosibles);
-            AvionAterriza(); // Añade uno al hangar al crearse
+            avionesEnHangar++;
             ultimoTiempoConstruccion = DateTime.Now; // Actualiza el tiempo de construcción
+            System.Diagnostics.Debug.WriteLine($"se creo un avion en el aeropuerto:");
             return nuevoAvion;
+            
         }
 
         private bool EsNodoValido(Nodo nodo)

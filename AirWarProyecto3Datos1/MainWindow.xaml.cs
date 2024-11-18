@@ -30,6 +30,7 @@ namespace AirWarProyecto3Datos1
         private BitmapImage imgPortaviones;
         private BitmapImage imgAeropuerto;
         private BitmapImage imgAvion;
+        private BitmapImage imgExplosion;
         private Image imgAvionElement;
 
         //Instancias
@@ -37,6 +38,7 @@ namespace AirWarProyecto3Datos1
         private List<Portaviones> portaviones;
         private List<Nodo> destinosPosibles;
         private List<Avion> avionesActivos = new List<Avion>();
+        private List<Explosion> explosionesActivas = new List<Explosion>();
         private Avion avion;
 
         private DispatcherTimer timer;
@@ -76,7 +78,7 @@ namespace AirWarProyecto3Datos1
             posicionesPortaviones = new List<Nodo>();
             // Generar aeropuerto y portaviones antes de dibujar el mapa
             GenerarEstructuras();
-            GenerarAvion();
+            //GenerarAvion();
 
             // Temporizador para creación de aviones
             timerCreacionAvion = new DispatcherTimer();
@@ -102,6 +104,7 @@ namespace AirWarProyecto3Datos1
         /// Logica del Avion
         /// </summary>
         private void GenerarAvion()
+
         {
             System.Diagnostics.Debug.WriteLine("Intentando generar un avión en algún aeropuerto...");
 
@@ -156,11 +159,9 @@ namespace AirWarProyecto3Datos1
 
         private void MoverAviones()
         {
-            if (avionesActivos.Count == 0)
-            {
-                System.Diagnostics.Debug.WriteLine("No hay aviones activos para mover.");
-                return;
-            }
+            if (avionesActivos.Count == 0) return;
+
+            List<Avion> avionesParaEliminar = new List<Avion>();
 
             foreach (var avion in avionesActivos)
             {
@@ -169,10 +170,31 @@ namespace AirWarProyecto3Datos1
                 Nodo nodoAnterior = avion.NodoActual;
                 avion.MoverAvion();
 
-                if (imagenesAviones.ContainsKey(avion))
+                if (avion.Combustible <= 0)
+                {
+                    // Mostrar explosión
+                    MostrarExplosion(avion.NodoActual);
+
+                    // Marcar el avión como inactivo
+                    avionesParaEliminar.Add(avion);
+
+                    // Eliminar la imagen del avión
+                    if (imagenesAviones.ContainsKey(avion))
+                    {
+                        MapaCanvas.Children.Remove(imagenesAviones[avion]);
+                        imagenesAviones.Remove(avion);
+                    }
+                }
+                else if (imagenesAviones.ContainsKey(avion))
                 {
                     ActualizarAnimacionAvion(avion, nodoAnterior);
                 }
+            }
+
+            // Eliminar aviones destruidos de la lista activa
+            foreach (var avion in avionesParaEliminar)
+            {
+                avionesActivos.Remove(avion);
             }
         }
 
@@ -242,6 +264,45 @@ namespace AirWarProyecto3Datos1
             return 0; // Default a norte
         }
 
+        private void MostrarExplosion(Nodo nodo)
+        {
+            // Cargar la imagen de la explosión
+            BitmapImage imagenExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
+
+
+            // Convertir el Nodo a coordenadas del Canvas
+            Point posicionCanvas = (ObtenerCoordenadasCanvas(nodo));
+
+            // Crear la explosión
+            Explosion explosion = new Explosion(posicionCanvas, imagenExplosion);
+
+            // Agregar al Canvas y a la lista
+            MapaCanvas.Children.Add(explosion.ImageElement);
+            explosionesActivas.Add(explosion);
+
+            // Programar la eliminación de la explosión tras 2 segundos
+            DispatcherTimer timer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromSeconds(2)
+            };
+            timer.Tick += (s, e) =>
+            {
+                // Eliminar visualmente y de la lista
+                MapaCanvas.Children.Remove(explosion.ImageElement);
+                explosionesActivas.Remove(explosion);
+                timer.Stop();
+            };
+            timer.Start();
+        }
+
+        private Point ObtenerCoordenadasCanvas(Nodo nodo)
+        {
+            int fila = matriz.GetRow(nodo);
+            int columna = matriz.GetColumn(nodo);
+            // Asegúrate de que TamañoCelda esté definido correctamente
+            const int TamañoCelda = 30; // Ajustar según el tamaño de las celdas en tu juego
+            return new Point(columna * TamañoCelda, fila * TamañoCelda);
+        }
 
 
         /// <summary>
@@ -254,6 +315,8 @@ namespace AirWarProyecto3Datos1
             imgAeropuerto = new BitmapImage(new Uri("Imagenes/Aeropuerto.png", UriKind.Relative));
             imgAvion = new BitmapImage(new Uri("Imagenes/Avion.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen del avión cargada: " + (imgAvion != null));
+            imgExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
+            System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgExplosion != null));
         }
 
         public void GenerarTerrenoPerlin()

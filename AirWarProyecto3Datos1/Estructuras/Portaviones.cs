@@ -1,4 +1,5 @@
-﻿using AirWarProyecto3Datos1.LogicaCentral;
+﻿using AirWarProyecto3Datos1.Airplane;
+using AirWarProyecto3Datos1.LogicaCentral;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,9 @@ namespace AirWarProyecto3Datos1.Estructuras
         public Nodo Ubicacion { get; set; }
         public int capacidadHangar = 30000;
         public int avionesEnHangar = 0;
+        // Reserva de combustible
+        private const int capacidadMaximaCombustible = 10000;
+        private int reservaCombustible = capacidadMaximaCombustible;
 
 
         public Portaviones(Nodo ubicacion)
@@ -28,16 +32,28 @@ namespace AirWarProyecto3Datos1.Estructuras
                 throw new Exception("El portaviones debe ubicarse en terreno de agua.");
             }
         }
-        public void AvionAterriza()
+        public void AvionAterriza(Avion avion)
         {
             if (HayEspacioEnHangar())
             {
                 avionesEnHangar++;
+                // Distribuir combustible al avión (2 de cada 3 aviones)
+                if (new Random().Next(3) < 2 && reservaCombustible > 0)
+                {
+                    int combustibleDistribuido = new Random().Next(200, 501);
+                    if (combustibleDistribuido > reservaCombustible)
+                        combustibleDistribuido = reservaCombustible;
+
+                    avion.RecargarCombustible(combustibleDistribuido);
+                    reservaCombustible -= combustibleDistribuido;
+
+                    System.Diagnostics.Debug.WriteLine($"Se suministraron {combustibleDistribuido} de combustible al avión.");
+                }
                 System.Diagnostics.Debug.WriteLine($"Avión aterrizó en {Nombre}. Aviones en hangar: {avionesEnHangar}.");
             }
             else
             {
-                System.Diagnostics.Debug.WriteLine($"Hangar del aeropuerto {Nombre} lleno. Avión no puede aterrizar.");
+                System.Diagnostics.Debug.WriteLine($"Hangar del portaviones {Nombre} lleno. Avión no puede aterrizar.");
             }
         }
         public bool HayEspacioEnHangar()

@@ -20,6 +20,7 @@ namespace AirWarProyecto3Datos1.Airplane
         private List<Nodo> DestinosPosibles { get; set; }
         public Portaviones PortavionesActual { get; private set; }
         public bool Activo { get; private set; }
+        public int Combustible { get; private set; } // Nueva propiedad
 
 
         public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles)
@@ -31,6 +32,7 @@ namespace AirWarProyecto3Datos1.Airplane
             Activo = true;
             Ruta = new List<Nodo>();
             HaLlegadoADestino = false;
+            Combustible = 1000; // Inicializar con el combustible estándar
         }
 
         // Asignar un destino aleatorio desde los disponibles
@@ -59,13 +61,13 @@ namespace AirWarProyecto3Datos1.Airplane
             if (Destino.TieneAeropuerto && Destino.Elemento is Aeropuerto aeropuertoDestino)
             {
                 NodoActual.TieneAvion = false;
-                aeropuertoDestino.AvionAterriza();
+                aeropuertoDestino.AvionAterriza(this); // Modificar para pasar el avión actual
                 System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el aeropuerto {aeropuertoDestino.Nombre}.");
             }
             else if (Destino.TienePortaviones && Destino.Elemento is Portaviones portavionesDestino)
             {
                 NodoActual.TieneAvion = false;
-                portavionesDestino.AvionAterriza();
+                portavionesDestino.AvionAterriza(this); // Modificar para pasar el avión actual
                 System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el portaviones {portavionesDestino.Nombre}.");
             }
             else
@@ -91,13 +93,13 @@ namespace AirWarProyecto3Datos1.Airplane
             {
                 aeropuertoDestino.AvionDespega();
                 AsignarDestinoAleatorio();
-                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el aeropuerto {aeropuertoDestino.Nombre}.");
+                System.Diagnostics.Debug.WriteLine($"El avión despego de aeropuerto {aeropuertoDestino.Nombre}.");
             }
             else if (Destino.TienePortaviones && Destino.Elemento is Portaviones portavionesDestino)
             {
                 portavionesDestino.AvionDespega();
                 AsignarDestinoAleatorio();
-                System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el portaviones {portavionesDestino.Nombre}.");
+                System.Diagnostics.Debug.WriteLine($"El avión despego de portaviones {portavionesDestino.Nombre}.");
             }
 
         }
@@ -129,6 +131,8 @@ namespace AirWarProyecto3Datos1.Airplane
                 NodoActual = Ruta[0];
                 NodoActual.TieneAvion = true;
                 Ruta.RemoveAt(0);
+                ConsumirCombustible(); // Consumir combustible al moverse
+                System.Diagnostics.Debug.WriteLine("Se mueve algun avion");
 
                 if (Ruta.Count == 0)
                 {
@@ -163,6 +167,34 @@ namespace AirWarProyecto3Datos1.Airplane
             return ruta;
         }
 
+        // Reducir combustible al moverse
+        private void ConsumirCombustible()
+        {
+            Combustible -= 300;
+            System.Diagnostics.Debug.WriteLine($"Combustible restante: {Combustible}");
+
+            if (Combustible <= 0)
+            {
+                Destruir();
+            }
+        }
+        // Reabastecer combustible al aterrizar
+        public void RecargarCombustible(int cantidad)
+        {
+            Combustible += cantidad;
+            if (Combustible > 1000) // Limitar al máximo de combustible
+                Combustible = 1000;
+            System.Diagnostics.Debug.WriteLine($"Combustible recargado. Nivel actual: {Combustible}.");
+        }
+
+        // Destruir el avión si el combustible llega a 0
+        private void Destruir()
+        {
+            Activo = false;
+            NodoActual.TieneAvion = false;
+            System.Diagnostics.Debug.WriteLine("El avión se destruyó por falta de combustible.");
+            // Lógica adicional para removerlo del juego si es necesario
+        }
         // Método para obtener el siguiente nodo en la dirección hacia el destino
         private Nodo ObtenerSiguienteNodoEnDireccion(Nodo actual, Nodo destino)
         {
