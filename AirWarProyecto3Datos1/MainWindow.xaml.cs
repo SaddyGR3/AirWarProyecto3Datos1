@@ -38,7 +38,6 @@ namespace AirWarProyecto3Datos1
         private List<Portaviones> portaviones;
         private List<Nodo> destinosPosibles;
         private List<Avion> avionesActivos = new List<Avion>();
-        private List<Explosion> explosionesActivas = new List<Explosion>();
         private Avion avion;
 
         private DispatcherTimer timer;
@@ -266,33 +265,47 @@ namespace AirWarProyecto3Datos1
 
         private void MostrarExplosion(Nodo nodo)
         {
-            // Cargar la imagen de la explosión
-            BitmapImage imagenExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
+            System.Diagnostics.Debug.WriteLine("Mostrando explosión en el nodo...");
 
+            if (imgExplosion == null)
+            {
+                System.Diagnostics.Debug.WriteLine("La imagen de explosión no está cargada.");
+                return;
+            }
 
-            // Convertir el Nodo a coordenadas del Canvas
-            Point posicionCanvas = (ObtenerCoordenadasCanvas(nodo));
+            int fila = matriz.GetRow(nodo);
+            int columna = matriz.GetColumn(nodo);
 
-            // Crear la explosión
-            Explosion explosion = new Explosion(posicionCanvas, imagenExplosion);
+            // Crear una nueva imagen para la explosión
+            Image imgExplosionInstance = new Image
+            {
+                Width = CellSize + 10,
+                Height = CellSize + 10,
+                Source = imgExplosion
+            };
+            Panel.SetZIndex(imgExplosionInstance, int.MaxValue);
 
-            // Agregar al Canvas y a la lista
-            MapaCanvas.Children.Add(explosion.ImageElement);
-            explosionesActivas.Add(explosion);
+            // Posicionar la imagen en el Canvas
+            Canvas.SetLeft(imgExplosionInstance, columna * CellSize - 5);
+            Canvas.SetTop(imgExplosionInstance, fila * CellSize - 5);
 
-            // Programar la eliminación de la explosión tras 2 segundos
-            DispatcherTimer timer = new DispatcherTimer
+            // Agregar al Canvas
+            MapaCanvas.Children.Add(imgExplosionInstance);
+            MapaCanvas.InvalidateVisual(); // Forzar el refresco de la interfaz
+
+            // Temporizador para eliminar la explosión después de 2 segundos
+            DispatcherTimer timerExplosion = new DispatcherTimer
             {
                 Interval = TimeSpan.FromSeconds(2)
             };
-            timer.Tick += (s, e) =>
+
+            timerExplosion.Tick += (s, e) =>
             {
-                // Eliminar visualmente y de la lista
-                MapaCanvas.Children.Remove(explosion.ImageElement);
-                explosionesActivas.Remove(explosion);
-                timer.Stop();
+                MapaCanvas.Children.Remove(imgExplosionInstance);
+                timerExplosion.Stop();
             };
-            timer.Start();
+
+            timerExplosion.Start();
         }
 
         private Point ObtenerCoordenadasCanvas(Nodo nodo)
