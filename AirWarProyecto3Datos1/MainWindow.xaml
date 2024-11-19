@@ -3,10 +3,12 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:local="clr-namespace:AirWarProyecto3Datos1"
         mc:Ignorable="d"
-        Title="AirWar - Mapa" Height="900" Width="900">
+        Title="AirWar - Mapa" Height="900" Width="900" ResizeMode="CanResize">
     <Grid>
-        <Canvas Name="MapaCanvas" Width="900" Height="900" Background="LightGray"/>
+        <Viewbox Stretch="Uniform">
+            <Canvas Name="MapaCanvas" Background="LightGray" Width="900" Height="900"/>
+        </Viewbox>
     </Grid>
 </Window>
+
