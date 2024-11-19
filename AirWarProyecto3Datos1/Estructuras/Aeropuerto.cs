@@ -15,7 +15,7 @@ namespace AirWarProyecto3Datos1.Estructuras
         public int capacidadHangar = 30000;
         public int avionesEnHangar = 0;
         private DateTime ultimoTiempoConstruccion;
-        private const int cooldownConstruccionSegundos = 10;
+        private const int cooldownConstruccionSegundos = 3;
 
         // Reserva de combustible
         private const int capacidadMaximaCombustible = 10000;

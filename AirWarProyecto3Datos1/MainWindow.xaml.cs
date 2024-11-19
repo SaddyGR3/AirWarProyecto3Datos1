@@ -81,7 +81,7 @@ namespace AirWarProyecto3Datos1
 
             // Temporizador para creación de aviones
             timerCreacionAvion = new DispatcherTimer();
-            timerCreacionAvion.Interval = TimeSpan.FromSeconds(10);
+            timerCreacionAvion.Interval = TimeSpan.FromSeconds(3);
             timerCreacionAvion.Tick += (s, e) => GenerarAvion();
             timerCreacionAvion.Start();
 

@@ -170,7 +170,7 @@ namespace AirWarProyecto3Datos1.Airplane
         // Reducir combustible al moverse
         private void ConsumirCombustible()
         {
-            Combustible -= 300;
+            Combustible -= 10;
             System.Diagnostics.Debug.WriteLine($"Combustible restante: {Combustible}");
 
             if (Combustible <= 0)
