@@ -1,6 +1,7 @@
 ﻿using AirWarProyecto3Datos1.Estructuras;
 using AirWarProyecto3Datos1.LogicaCentral;
 using AirWarProyecto3Datos1.Airplane;
+using AirWarProyecto3Datos1.Player;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,7 +32,10 @@ namespace AirWarProyecto3Datos1
         private BitmapImage imgAeropuerto;
         private BitmapImage imgAvion;
         private BitmapImage imgExplosion;
+        private Jugador jugador;
+        private BitmapImage imgJugador;
         private Image imgAvionElement;
+        private Image imgJugadorElement;
 
         //Instancias
         private List<Aeropuerto> aeropuertos;
@@ -56,6 +60,29 @@ namespace AirWarProyecto3Datos1
             matriz = new Matriz(30, 30); // Matriz de 30x30
             GenerarTerrenoPerlin();
             CargarImagenes(); // Cargar las imágenes una sola vez
+            Nodo ubicacionInicial = matriz.Matrix[matriz.Matrix.GetLength(0) - 1, matriz.Matrix.GetLength(1) / 2];
+            jugador = new Jugador(ubicacionInicial);
+
+            DibujarJugador();
+
+            this.KeyDown += Window_KeyDown;
+            imgJugadorElement = new Image
+            {
+                Width = CellSize,
+                Height = CellSize,
+                Source = imgJugador // BitmapImage cargado previamente
+            };
+
+            int fila = matriz.GetRow(jugador.Ubicacion);
+            int columna = matriz.GetColumn(jugador.Ubicacion);
+
+            Canvas.SetLeft(imgJugadorElement, columna * CellSize);
+            Canvas.SetTop(imgJugadorElement, fila * CellSize);
+
+            MapaCanvas.Children.Add(imgJugadorElement);
+            Panel.SetZIndex(imgJugadorElement, int.MaxValue);
+
+
 
             aeropuertos = new List<Aeropuerto>();
             portaviones = new List<Portaviones>();
@@ -330,6 +357,8 @@ namespace AirWarProyecto3Datos1
             System.Diagnostics.Debug.WriteLine("Imagen del avión cargada: " + (imgAvion != null));
             imgExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgExplosion != null));
+            imgJugador = imgExplosion = new BitmapImage(new Uri("Imagenes/Jugador.png", UriKind.Relative));
+            System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgJugador != null));
         }
 
         public void GenerarTerrenoPerlin()
@@ -388,6 +417,38 @@ namespace AirWarProyecto3Datos1
                 }
             }
         }
+        private void DibujarJugador()
+        {
+            if (imgJugadorElement == null)
+            {
+                imgJugadorElement = new Image
+                {
+                    Width = CellSize,
+                    Height = CellSize,
+                    Source = imgJugador
+                };
+            }
+
+            // Calcula la posición
+            int fila = matriz.GetRow(jugador.Ubicacion);
+            int columna = matriz.GetColumn(jugador.Ubicacion);
+            System.Diagnostics.Debug.WriteLine($"Dibujando jugador en fila={fila}, columna={columna}");
+
+            // Configura la posición en el Canvas
+            Canvas.SetLeft(imgJugadorElement, columna * CellSize);
+            Canvas.SetTop(imgJugadorElement, fila * CellSize);
+
+            // Asegúrate de agregar al Canvas
+            if (!MapaCanvas.Children.Contains(imgJugadorElement))
+            {
+                MapaCanvas.Children.Add(imgJugadorElement);
+            }
+
+            // Asegúrate de que esté visible y al frente
+            Panel.SetZIndex(imgJugadorElement, int.MaxValue);
+            MapaCanvas.InvalidateVisual();
+        }
+
 
         private void DibujarMapa()
         {
@@ -435,6 +496,7 @@ namespace AirWarProyecto3Datos1
                         Canvas.SetTop(img, i * CellSize - 5);
                         MapaCanvas.Children.Add(img);
                     }
+                   
                 }
             }
 
@@ -451,6 +513,33 @@ namespace AirWarProyecto3Datos1
                     MapaCanvas.Children.Add(imgAvionElement);
                 }
             }
+            if (jugador != null && jugador.Ubicacion != null)
+            {
+                int filaJugador = matriz.GetRow(jugador.Ubicacion);
+                int columnaJugador = matriz.GetColumn(jugador.Ubicacion);
+
+                Canvas.SetLeft(imgJugadorElement, columnaJugador * CellSize);
+                Canvas.SetTop(imgJugadorElement, filaJugador * CellSize);
+                if (!MapaCanvas.Children.Contains(imgJugadorElement))
+                {
+                    MapaCanvas.Children.Add(imgJugadorElement);
+                }
+            }
         }
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.Left:
+                    jugador.MoverIzquierda();
+                    DibujarJugador();
+                    break;
+                case Key.Right:
+                    jugador.MoverDerecha();
+                    DibujarJugador();
+                    break;
+            }
+        }
+
     }
 }
