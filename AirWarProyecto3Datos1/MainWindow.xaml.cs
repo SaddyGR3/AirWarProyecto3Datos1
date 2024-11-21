@@ -32,17 +32,21 @@ namespace AirWarProyecto3Datos1
         private BitmapImage imgAeropuerto;
         private BitmapImage imgAvion;
         private BitmapImage imgExplosion;
-        private Jugador jugador;
         private BitmapImage imgJugador;
         private Image imgAvionElement;
         private Image imgJugadorElement;
-
+        private BitmapImage imgBala;
+        private Image imgBalaElement;
+        
         //Instancias
         private List<Aeropuerto> aeropuertos;
         private List<Portaviones> portaviones;
         private List<Nodo> destinosPosibles;
         private List<Avion> avionesActivos = new List<Avion>();
+        private Jugador jugador;
         private Avion avion;
+        private Bala bala;
+        
 
         private DispatcherTimer timer;
         private DispatcherTimer timerCreacionAvion;
@@ -51,7 +55,12 @@ namespace AirWarProyecto3Datos1
         private List<Nodo> posicionesPortaviones;
         // Lista para almacenar imágenes de cada avión en el mapa
         private Dictionary<Avion, Image> imagenesAviones = new Dictionary<Avion, Image>();
-
+        //balas 
+        private DateTime tiempoInicioDisparo;
+        private bool disparando = false;
+        private List<Bala> balasActivas = new List<Bala>();
+        private DispatcherTimer timerBalas = new DispatcherTimer();
+        private Dictionary<Bala, Image> imagenesBalas = new Dictionary<Bala, Image>();
 
         public MainWindow()
         {
@@ -64,7 +73,7 @@ namespace AirWarProyecto3Datos1
             jugador = new Jugador(ubicacionInicial);
 
             DibujarJugador();
-
+            
             this.KeyDown += Window_KeyDown;
             imgJugadorElement = new Image
             {
@@ -83,6 +92,8 @@ namespace AirWarProyecto3Datos1
             Panel.SetZIndex(imgJugadorElement, int.MaxValue);
 
 
+            
+            
 
             aeropuertos = new List<Aeropuerto>();
             portaviones = new List<Portaviones>();
@@ -121,9 +132,14 @@ namespace AirWarProyecto3Datos1
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += (s, e) => MoverAviones();
             timer.Start();
-
+            timerBalas= new DispatcherTimer();
+            timerBalas.Interval = TimeSpan.FromMilliseconds(100);
+            timerBalas.Tick += (s, e) => MoverBalas();
+            timerBalas.Start();
 
             DibujarMapa();
+            
+
         }
 
         /// </summary>
@@ -261,7 +277,7 @@ namespace AirWarProyecto3Datos1
             };
             imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
         }
-
+        
 
         // Método para calcular el ángulo de rotación
         private double CalcularAngulo(int filaAnterior, int columnaAnterior, int filaNueva, int columnaNueva)
@@ -358,7 +374,10 @@ namespace AirWarProyecto3Datos1
             imgExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgExplosion != null));
             imgJugador = imgExplosion = new BitmapImage(new Uri("Imagenes/Jugador.png", UriKind.Relative));
-            System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgJugador != null));
+            System.Diagnostics.Debug.WriteLine("Imagen del jugador cargada: " + (imgJugador != null));
+            imgBala= imgExplosion = new BitmapImage(new Uri("Imagenes/Bala.png", UriKind.Relative));
+            System.Diagnostics.Debug.WriteLine("Imagen de la bala cargada: " + (imgBala != null));
+
         }
 
         public void GenerarTerrenoPerlin()
@@ -528,18 +547,140 @@ namespace AirWarProyecto3Datos1
         }
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            Nodo nodoAnterior = jugador.Ubicacion;
+
             switch (e.Key)
             {
                 case Key.Left:
                     jugador.MoverIzquierda();
-                    DibujarJugador();
+                    
+                    DibujarJugador(); // Actualiza la representación gráfica del jugador
+
+                    
                     break;
                 case Key.Right:
                     jugador.MoverDerecha();
+                    
                     DibujarJugador();
+                    
+                    break;
+                case Key.Space:
+                    if (!disparando)
+                    {
+                        disparando = true;
+                        tiempoInicioDisparo = DateTime.Now; // Guarda el tiempo cuando se presionó el espacio
+                        
+                    }
                     break;
             }
         }
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            base.OnKeyUp(e);
+
+            if (e.Key == Key.Space && disparando)
+            {
+                disparando = false;
+                TimeSpan duracionPresion = DateTime.Now - tiempoInicioDisparo;
+
+                // Calcular la velocidad en función del tiempo de presión
+                // El tiempo de presión se utiliza para ajustar la velocidad de la bala.
+                int velocidadBala = Math.Max(50, Math.Min(200, 200 - (int)duracionPresion.TotalMilliseconds));
+
+
+                // Crear la bala con la velocidad calculada
+                Bala nuevaBala = new Bala(jugador.Ubicacion, matriz, velocidadBala);
+                balasActivas.Add(nuevaBala);  // Añadir la bala a las activas
+                DibujarBala(nuevaBala);  // Dibuja la bala en la pantalla
+            }
+        }
+
+
+
+
+        // Método para dibujar la bala
+        // Método para mover las balas
+        private void MoverBalas()
+        {
+            if (balasActivas.Count == 0) return;
+
+            foreach (var bala in balasActivas.ToList()) // Usamos ToList() para evitar modificar la lista mientras la iteramos
+            {
+                if (bala == null || !bala.Activo)
+                {
+                    EliminarBalaDeVista(bala); // Eliminar la bala de la vista si ya no está activa
+                    continue;
+                }
+
+                // Mueve la bala según su velocidad
+                bala.MoverBala();
+
+                // Actualiza su posición en el Canvas
+                DibujarBala(bala);
+            }
+        }
+
+        private void EliminarBalaDeVista(Bala bala)
+        {
+            if (imagenesBalas.ContainsKey(bala))
+            {
+                // Eliminar la imagen de la pantalla
+                Image imgBalaElement = imagenesBalas[bala];
+                MapaCanvas.Children.Remove(imgBalaElement); // Elimina la imagen del Canvas
+
+                // Eliminar la bala de la lista de imágenes
+                imagenesBalas.Remove(bala);
+            }
+
+            // Eliminar la bala de la lista de balas activas
+            balasActivas.Remove(bala);
+        }
+
+
+
+
+        // Método para dibujar la bala (actualiza su posición en el Canvas)
+        private void DibujarBala(Bala bala)
+        {
+            // Si la bala ya tiene una imagen, actualizar su posición
+            if (!imagenesBalas.ContainsKey(bala))
+            {
+                // Crear una nueva imagen para la bala si no existe
+                imgBalaElement = new Image
+                {
+                    Width = CellSize,
+                    Height = CellSize,
+                    Source = imgBala // Imagen de la bala previamente cargada
+                };
+
+                int fila = matriz.GetRow(bala.NodoActual);
+                int columna = matriz.GetColumn(bala.NodoActual);
+
+                Canvas.SetLeft(imgBalaElement, columna * CellSize);
+                Canvas.SetTop(imgBalaElement, fila * CellSize);
+
+                MapaCanvas.Children.Add(imgBalaElement); // Añadir la imagen al canvas
+
+                imagenesBalas[bala] = imgBalaElement; // Guardar la imagen para su eliminación futura
+            }
+            else
+            {
+                // Si la bala ya tiene imagen, actualizar su posición
+                imgBalaElement = imagenesBalas[bala];
+
+                int fila = matriz.GetRow(bala.NodoActual);
+                int columna = matriz.GetColumn(bala.NodoActual);
+
+                Canvas.SetLeft(imgBalaElement, columna * CellSize);
+                Canvas.SetTop(imgBalaElement, fila * CellSize);
+            }
+        }
+
+
+
+
+
+
 
     }
 }

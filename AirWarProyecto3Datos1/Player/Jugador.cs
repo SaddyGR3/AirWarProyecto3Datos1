@@ -12,6 +12,7 @@ namespace AirWarProyecto3Datos1.Player
     {
         public string Nombre { get; set; }
         public Nodo Ubicacion { get; set; }
+
         
 
         public Jugador(Nodo ubicacionInicial)

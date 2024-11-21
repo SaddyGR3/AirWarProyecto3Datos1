@@ -11,6 +11,7 @@
   <ItemGroup>
     <None Remove="Imagenes\Aeropuerto.png" />
     <None Remove="Imagenes\Avion.png" />
+    <None Remove="Imagenes\Bala.png" />
     <None Remove="Imagenes\explosion.png" />
     <None Remove="Imagenes\Jugador.png" />
     <None Remove="Imagenes\portaviones.png" />
@@ -23,6 +24,7 @@
     <Resource Include="Imagenes\Avion.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
+    <Resource Include="Imagenes\Bala.png" />
     <Resource Include="Imagenes\explosion.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Resource>
