@@ -37,7 +37,7 @@ namespace AirWarProyecto3Datos1
         private Image imgJugadorElement;
         private BitmapImage imgBala;
         private Image imgBalaElement;
-        
+
         //Instancias
         private List<Aeropuerto> aeropuertos;
         private List<Portaviones> portaviones;
@@ -46,7 +46,7 @@ namespace AirWarProyecto3Datos1
         private Jugador jugador;
         private Avion avion;
         private Bala bala;
-        
+
 
         private DispatcherTimer timer;
         private DispatcherTimer timerCreacionAvion;
@@ -73,7 +73,7 @@ namespace AirWarProyecto3Datos1
             jugador = new Jugador(ubicacionInicial);
 
             DibujarJugador();
-            
+
             this.KeyDown += Window_KeyDown;
             imgJugadorElement = new Image
             {
@@ -92,8 +92,8 @@ namespace AirWarProyecto3Datos1
             Panel.SetZIndex(imgJugadorElement, int.MaxValue);
 
 
-            
-            
+
+
 
             aeropuertos = new List<Aeropuerto>();
             portaviones = new List<Portaviones>();
@@ -102,7 +102,7 @@ namespace AirWarProyecto3Datos1
             {
                 Width = CellSize,
                 Height = CellSize,
-                Source = imgAvion 
+                Source = imgAvion
             };
 
             // Agrega imgAvionElement al Canvas al inicio
@@ -132,13 +132,13 @@ namespace AirWarProyecto3Datos1
             timer.Interval = TimeSpan.FromMilliseconds(500);
             timer.Tick += (s, e) => MoverAviones();
             timer.Start();
-            timerBalas= new DispatcherTimer();
+            timerBalas = new DispatcherTimer();
             timerBalas.Interval = TimeSpan.FromMilliseconds(100);
             timerBalas.Tick += (s, e) => MoverBalas();
             timerBalas.Start();
-
-            DibujarMapa();
             
+            DibujarMapa();
+
 
         }
 
@@ -148,7 +148,7 @@ namespace AirWarProyecto3Datos1
         private void GenerarAvion()
 
         {
-            System.Diagnostics.Debug.WriteLine("Intentando generar un avión en algún aeropuerto...");
+            //System.Diagnostics.Debug.WriteLine("Intentando generar un avión en algún aeropuerto...");
 
             foreach (var aeropuerto in aeropuertos)
             {
@@ -157,7 +157,7 @@ namespace AirWarProyecto3Datos1
                     Avion nuevoAvion = aeropuerto.CrearAvion(matriz, destinosPosibles); // Crear el avión
                     if (nuevoAvion != null)
                     {
-                        System.Diagnostics.Debug.WriteLine($"Avión creado en aeropuerto: {aeropuerto.Nombre}");
+                        //System.Diagnostics.Debug.WriteLine($"Avión creado en aeropuerto: {aeropuerto.Nombre}");
                         avionesActivos.Add(nuevoAvion);
                         // Asignar el destino automáticamente y despegar
                         nuevoAvion.AsignarDestinoAleatorio();
@@ -171,7 +171,7 @@ namespace AirWarProyecto3Datos1
                 }
             }
 
-            System.Diagnostics.Debug.WriteLine("No se creó el avión: ningún aeropuerto disponible.");
+            //System.Diagnostics.Debug.WriteLine("No se creó el avión: ningún aeropuerto disponible.");
         }
         private void DibujarAvion(Avion avion)
         {
@@ -277,7 +277,7 @@ namespace AirWarProyecto3Datos1
             };
             imgAvionElement.BeginAnimation(Canvas.TopProperty, animY);
         }
-        
+
 
         // Método para calcular el ángulo de rotación
         private double CalcularAngulo(int filaAnterior, int columnaAnterior, int filaNueva, int columnaNueva)
@@ -373,9 +373,9 @@ namespace AirWarProyecto3Datos1
             System.Diagnostics.Debug.WriteLine("Imagen del avión cargada: " + (imgAvion != null));
             imgExplosion = new BitmapImage(new Uri("Imagenes/explosion.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen de la explosión cargada: " + (imgExplosion != null));
-            imgJugador = imgExplosion = new BitmapImage(new Uri("Imagenes/Jugador.png", UriKind.Relative));
+            imgJugador = new BitmapImage(new Uri("Imagenes/Jugador.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen del jugador cargada: " + (imgJugador != null));
-            imgBala= imgExplosion = new BitmapImage(new Uri("Imagenes/Bala.png", UriKind.Relative));
+            imgBala = new BitmapImage(new Uri("Imagenes/Bala.png", UriKind.Relative));
             System.Diagnostics.Debug.WriteLine("Imagen de la bala cargada: " + (imgBala != null));
 
         }
@@ -451,7 +451,7 @@ namespace AirWarProyecto3Datos1
             // Calcula la posición
             int fila = matriz.GetRow(jugador.Ubicacion);
             int columna = matriz.GetColumn(jugador.Ubicacion);
-            System.Diagnostics.Debug.WriteLine($"Dibujando jugador en fila={fila}, columna={columna}");
+            //System.Diagnostics.Debug.WriteLine($"Dibujando jugador en fila={fila}, columna={columna}");
 
             // Configura la posición en el Canvas
             Canvas.SetLeft(imgJugadorElement, columna * CellSize);
@@ -515,7 +515,7 @@ namespace AirWarProyecto3Datos1
                         Canvas.SetTop(img, i * CellSize - 5);
                         MapaCanvas.Children.Add(img);
                     }
-                   
+
                 }
             }
 
@@ -553,23 +553,23 @@ namespace AirWarProyecto3Datos1
             {
                 case Key.Left:
                     jugador.MoverIzquierda();
-                    
+
                     DibujarJugador(); // Actualiza la representación gráfica del jugador
 
-                    
+
                     break;
                 case Key.Right:
                     jugador.MoverDerecha();
-                    
+
                     DibujarJugador();
-                    
+
                     break;
                 case Key.Space:
                     if (!disparando)
                     {
                         disparando = true;
                         tiempoInicioDisparo = DateTime.Now; // Guarda el tiempo cuando se presionó el espacio
-                        
+
                     }
                     break;
             }
@@ -592,6 +592,7 @@ namespace AirWarProyecto3Datos1
                 Bala nuevaBala = new Bala(jugador.Ubicacion, matriz, velocidadBala);
                 balasActivas.Add(nuevaBala);  // Añadir la bala a las activas
                 DibujarBala(nuevaBala);  // Dibuja la bala en la pantalla
+                //System.Diagnostics.Debug.WriteLine("la velocidad de la bala es:", velocidadBala);
             }
         }
 
@@ -615,8 +616,12 @@ namespace AirWarProyecto3Datos1
                 // Mueve la bala según su velocidad
                 bala.MoverBala();
 
+                DetectarColision();
+                
+
                 // Actualiza su posición en el Canvas
                 DibujarBala(bala);
+                MapaCanvas.InvalidateVisual();
             }
         }
 
@@ -624,17 +629,23 @@ namespace AirWarProyecto3Datos1
         {
             if (imagenesBalas.ContainsKey(bala))
             {
-                // Eliminar la imagen de la pantalla
                 Image imgBalaElement = imagenesBalas[bala];
                 MapaCanvas.Children.Remove(imgBalaElement); // Elimina la imagen del Canvas
-
-                // Eliminar la bala de la lista de imágenes
                 imagenesBalas.Remove(bala);
+                System.Diagnostics.Debug.WriteLine($"Imagen de bala eliminada: {bala}");
             }
 
             // Eliminar la bala de la lista de balas activas
-            balasActivas.Remove(bala);
+            if (balasActivas.Contains(bala))
+            {
+                balasActivas.Remove(bala);
+                System.Diagnostics.Debug.WriteLine($"Bala eliminada de balasActivas: {bala}");
+            }
+
+            // Refresca el Canvas manualmente
+            MapaCanvas.InvalidateVisual();
         }
+
 
 
 
@@ -675,12 +686,61 @@ namespace AirWarProyecto3Datos1
                 Canvas.SetTop(imgBalaElement, fila * CellSize);
             }
         }
+        private void DetectarColision()
+        {
+            var balasAEliminar = new List<Bala>();
+            var avionesAEliminar = new List<Avion>();
 
+            foreach (var bala in balasActivas)
+            {
+                if (bala.ImpactarAvion())
+                {
+                    foreach (var avion in avionesActivos)
+                    {
+                        if (avion.NodoActual == bala.NodoActual) // Verificar si están en la misma casilla
+                        {
+                            MostrarExplosion(avion.NodoActual);
+                            avion.Destruir();
+                            avionesAEliminar.Add(avion); // Marcar avión para eliminación
+                            System.Diagnostics.Debug.WriteLine("Un avión debió destruirse");
+                        }
+                    }
 
+                    balasAEliminar.Add(bala); // Marcar bala para eliminación
+                }
+            }
 
+            // Eliminar las balas marcadas
+            foreach (var bala in balasAEliminar)
+            {
+                
+                bala.DestruirBala();
+                EliminarBalaDeVista(bala);
+                MapaCanvas.InvalidateVisual();
+            }
 
+            // Eliminar los aviones marcados
+            foreach (var avion in avionesAEliminar)
+            {
+                EliminarAvionDeVista(avion);
+            }
+            MapaCanvas.InvalidateVisual();
+        }
 
+        private void EliminarAvionDeVista(Avion avion)
+        {
+            if (imagenesAviones.ContainsKey(avion))
+            {
+                Image imgAvionElement = imagenesAviones[avion];
+                MapaCanvas.Children.Remove(imgAvionElement); // Elimina la imagen del Canvas
 
+                // Eliminar la avion de la lista de imágenes
+                imagenesAviones.Remove(avion);
+                System.Diagnostics.Debug.WriteLine("un avion debio borrarse");
+            }
+            avionesActivos.Remove(avion);
+        }
+        
 
     }
 }

@@ -188,7 +188,7 @@ namespace AirWarProyecto3Datos1.Airplane
         }
 
         // Destruir el avión si el combustible llega a 0
-        private void Destruir()
+        public void Destruir()
         {
             Activo = false;
             NodoActual.TieneAvion = false;

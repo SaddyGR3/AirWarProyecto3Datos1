@@ -16,9 +16,9 @@ namespace AirWarProyecto3Datos1.Player
     {
         public Nodo NodoActual { get; private set; }
         public Matriz Matriz { get; private set; }
-        public bool Activo { get; private set; }
+        public bool Activo { get;  set; }
         private int velocidadBala;
-        private DispatcherTimer timer;
+        public DispatcherTimer timer;
 
 
         public Bala(Nodo nodoInicial, Matriz matriz, int velocidad)
@@ -47,7 +47,7 @@ namespace AirWarProyecto3Datos1.Player
                 // La bala salió del mapa, desactivarla
                 Activo = false;
                 NodoActual.TieneBala = false; // Limpiar la casilla
-                System.Diagnostics.Debug.WriteLine("bala llego al limite");
+                //System.Diagnostics.Debug.WriteLine("bala llego al limite");
                 timer.Stop(); // Detener el temporizador
                 
                 return;
@@ -56,23 +56,36 @@ namespace AirWarProyecto3Datos1.Player
             NodoActual.TieneBala = false; // Limpiar la casilla anterior
             NodoActual = siguienteNodo; // Actualizar la posición de la bala
             NodoActual.TieneBala = true; // Colocar la bala en la nueva casilla
-            System.Diagnostics.Debug.WriteLine("¡Bala se mueve!");
+            //System.Diagnostics.Debug.WriteLine("¡Bala se mueve!");
         }
-        
+
         // Método para destruir la bala cuando se queda sin combustible
-        private void DestruirBala()
+        public void DestruirBala()
         {
             Activo = false;
             NodoActual.TieneBala = false;
-            // Aquí podrías agregar la lógica para eliminar la bala de la vista
+            if (timer != null)
+            {
+                timer.Stop(); // Detener el temporizador
+                timer = null; // Liberar referencia para evitar fugas
+                System.Diagnostics.Debug.WriteLine("Temporizador de bala detenido y eliminado.");
+            }
         }
 
+
         // Método para gestionar el impacto de la bala sobre un avión
-        private void ImpactarAvion()
+        public bool ImpactarAvion()
         {
-            // Aquí se asume que si hay un avión en el nodo, se destruye
-            // Podrías agregar un método en la clase Avion para manejar la destrucción
-            System.Diagnostics.Debug.WriteLine("¡Bala impactó un avión!");
+            if (NodoActual.TieneAvion == true)
+            {
+                Activo = false;
+                NodoActual.TieneBala = false;
+                timer.Stop();
+                System.Diagnostics.Debug.WriteLine("¡Bala impactó un avión!");
+                return true;
+            }
+            return false;
+            //System.Diagnostics.Debug.WriteLine("¡Bala impactó un avión!");
             // Lógica para destruir el avión o restarle vida
             // avion.Destruir();
         }
