@@ -63,6 +63,8 @@ namespace AirWarProyecto3Datos1
         private List<Bala> balasAEliminar = new List<Bala>();
         private DispatcherTimer timerBalas = new DispatcherTimer();
         private Dictionary<Bala, Image> imagenesBalas = new Dictionary<Bala, Image>();
+        private int AvionesDerribados;
+        private DispatcherTimer TimerJuego = new DispatcherTimer();
 
         public MainWindow()
         {
@@ -75,7 +77,7 @@ namespace AirWarProyecto3Datos1
             jugador = new Jugador(ubicacionInicial);
 
             DibujarJugador();
-
+            AvionesDerribados = 0;
             this.KeyDown += Window_KeyDown;
             imgJugadorElement = new Image
             {
@@ -138,12 +140,26 @@ namespace AirWarProyecto3Datos1
             timerBalas.Interval = TimeSpan.FromMilliseconds(100);
             timerBalas.Tick += (s, e) => MoverBalas();
             timerBalas.Start();
-            
+            TimerJuego = new DispatcherTimer();
+            TimerJuego.Interval = TimeSpan.FromMilliseconds(90000);
+            TimerJuego.Tick += (s, e) => DetenerJuego();
+            TimerJuego.Start();
             DibujarMapa();
 
 
         }
-
+        private void DetenerJuego()
+        {
+            timerCreacionAvion.Stop();
+            TimerJuego.Stop();
+            timer.Stop();
+            timerBalas.Stop();
+            MessageBox.Show($"¡El juego terminó! Derribaste {AvionesDerribados} aviones.",
+                    "Fin del Juego",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            System.Diagnostics.Debug.WriteLine($"el juego termino derribaste {AvionesDerribados} aviones");
+        }
         /// </summary>
         /// Logica del Avion
         /// </summary>
@@ -701,6 +717,7 @@ namespace AirWarProyecto3Datos1
                     {
                         if (avion.NodoActual == bala.NodoActual) // Verificar si están en la misma casilla
                         {
+                            AvionesDerribados++;
                             MostrarExplosion(avion.NodoActual);
                             avion.Destruir();
                             avionesAEliminar.Add(avion); // Marcar avión para eliminación
