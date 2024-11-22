@@ -14,6 +14,7 @@ using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Media.Animation;
+using System.Collections.Generic;
 
 
 namespace AirWarProyecto3Datos1
@@ -59,6 +60,7 @@ namespace AirWarProyecto3Datos1
         private DateTime tiempoInicioDisparo;
         private bool disparando = false;
         private List<Bala> balasActivas = new List<Bala>();
+        private List<Bala> balasAEliminar = new List<Bala>();
         private DispatcherTimer timerBalas = new DispatcherTimer();
         private Dictionary<Bala, Image> imagenesBalas = new Dictionary<Bala, Image>();
 
@@ -688,7 +690,7 @@ namespace AirWarProyecto3Datos1
         }
         private void DetectarColision()
         {
-            var balasAEliminar = new List<Bala>();
+            
             var avionesAEliminar = new List<Avion>();
 
             foreach (var bala in balasActivas)
@@ -713,9 +715,11 @@ namespace AirWarProyecto3Datos1
             // Eliminar las balas marcadas
             foreach (var bala in balasAEliminar)
             {
+                System.Diagnostics.Debug.WriteLine("una bala debio borrarse");
                 
                 bala.DestruirBala();
                 EliminarBalaDeVista(bala);
+                //ActualizarBalas();
                 MapaCanvas.InvalidateVisual();
             }
 
@@ -740,7 +744,23 @@ namespace AirWarProyecto3Datos1
             }
             avionesActivos.Remove(avion);
         }
-        
 
+        private void ActualizarBalas()
+        {
+            if (balasActivas.Count == 0) return;
+
+            foreach (var bala in balasActivas.ToList()) // Usamos ToList() para evitar modificar la lista mientras la iteramos
+            {
+                if (bala == null || !bala.Activo)
+                {
+                    EliminarBalaDeVista(bala); // Eliminar la bala de la vista si ya no está activa
+                    continue;
+                }
+
+                // Mueve la bala según su velocidad
+               
+                MapaCanvas.InvalidateVisual();
+            }
+        }
     }
 }
