@@ -681,22 +681,21 @@ namespace AirWarProyecto3Datos1
 
         private void EscribirRutasEnArchivo()
         {
+            // Definir la ruta directa a C:\Rutas
+            string directoryPath = @"C:\Rutas";  // Se cambia la ruta a C:\Rutas
 
-            string filePath = @"C:\Users\saddy\Desktop\rutas.txt";
+            if (!Directory.Exists(directoryPath))
+            {
+                Directory.CreateDirectory(directoryPath);  // Crea la carpeta "Rutas" si no existe
+            }
+
+            string filePath = System.IO.Path.Combine(directoryPath, "rutas.txt");
 
             try
             {
                 // Resolver ruta absoluta
                 string absolutePath = System.IO.Path.GetFullPath(filePath);
                 System.Diagnostics.Debug.WriteLine($"Ruta absoluta del archivo: {absolutePath}");
-
-                // Crear la carpeta si no existe
-                string directoryPath = System.IO.Path.GetDirectoryName(absolutePath);
-                if (!string.IsNullOrEmpty(directoryPath) && !Directory.Exists(directoryPath))
-                {
-                    Directory.CreateDirectory(directoryPath);
-                    System.Diagnostics.Debug.WriteLine($"Directorio creado: {directoryPath}");
-                }
 
                 // Crear o sobrescribir el archivo
                 using (StreamWriter writer = new StreamWriter(absolutePath, false))
