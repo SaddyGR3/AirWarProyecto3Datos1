@@ -22,6 +22,7 @@ namespace AirWarProyecto3Datos1.Airplane
         public bool Activo { get; private set; }
         public int Combustible { get; private set; } // Nueva propiedad
 
+        public Guid ID { get; private set; }
 
         public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles)
         {
@@ -33,6 +34,12 @@ namespace AirWarProyecto3Datos1.Airplane
             Ruta = new List<Nodo>();
             HaLlegadoADestino = false;
             Combustible = 1000; // Inicializar con el combustible estándar
+            GenerarID();
+        }
+        public void GenerarID()
+        {
+            ID = Guid.NewGuid();
+            System.Diagnostics.Debug.WriteLine($"el ID es {ID}");
         }
 
         // Asignar un destino aleatorio desde los disponibles

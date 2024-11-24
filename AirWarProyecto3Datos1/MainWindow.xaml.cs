@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.Windows.Threading;
 using System.Windows.Media.Animation;
 using System.Collections.Generic;
+using System;
 
 
 namespace AirWarProyecto3Datos1
@@ -56,6 +57,8 @@ namespace AirWarProyecto3Datos1
         private List<Nodo> posicionesPortaviones;
         // Lista para almacenar imágenes de cada avión en el mapa
         private Dictionary<Avion, Image> imagenesAviones = new Dictionary<Avion, Image>();
+        private List<Guid> Guids = new List<Guid>();
+        private List<Guid> SortedGuids = new List<Guid>();
         //balas 
         private DateTime tiempoInicioDisparo;
         private bool disparando = false;
@@ -141,7 +144,7 @@ namespace AirWarProyecto3Datos1
             timerBalas.Tick += (s, e) => MoverBalas();
             timerBalas.Start();
             TimerJuego = new DispatcherTimer();
-            TimerJuego.Interval = TimeSpan.FromMilliseconds(90000);
+            TimerJuego.Interval = TimeSpan.FromMilliseconds(30000);
             TimerJuego.Tick += (s, e) => DetenerJuego();
             TimerJuego.Start();
             DibujarMapa();
@@ -150,14 +153,17 @@ namespace AirWarProyecto3Datos1
         }
         private void DetenerJuego()
         {
+            SortedGuids= MergeSort(Guids);
             timerCreacionAvion.Stop();
             TimerJuego.Stop();
             timer.Stop();
             timerBalas.Stop();
-            MessageBox.Show($"¡El juego terminó! Derribaste {AvionesDerribados} aviones.",
-                    "Fin del Juego",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+            MessageBox.Show(
+    $"¡El juego terminó! Derribaste {AvionesDerribados} aviones.\nIDs de los aviones derribados: {string.Join(", ", SortedGuids)}",
+    "Fin del Juego",
+    MessageBoxButton.OK,
+    MessageBoxImage.Information
+);
             System.Diagnostics.Debug.WriteLine($"el juego termino derribaste {AvionesDerribados} aviones");
         }
         /// </summary>
@@ -183,6 +189,10 @@ namespace AirWarProyecto3Datos1
 
                         // Dibujar el avión en el mapa
                         DibujarAvion(nuevoAvion);
+                        Guids.Add(nuevoAvion.ID);
+
+                        System.Diagnostics.Debug.WriteLine($"La lista de los ID de aviones es: {string.Join(", ", Guids)}");
+
 
                         return; // Salimos del método tras crear y despegar un avión
                     }
@@ -779,5 +789,40 @@ namespace AirWarProyecto3Datos1
                 MapaCanvas.InvalidateVisual();
             }
         }
+        static List<Guid> MergeSort(List<Guid> list)
+        {
+            if (list.Count <= 1)
+                return list;
+
+            int mid = list.Count / 2;
+            List<Guid> left = list.GetRange(0, mid);
+            List<Guid> right = list.GetRange(mid, list.Count - mid);
+
+            return Merge(MergeSort(left), MergeSort(right));
+        }
+
+        static List<Guid> Merge(List<Guid> left, List<Guid> right)
+        {
+            List<Guid> result = new List<Guid>();
+            int i = 0, j = 0;
+
+            while (i < left.Count && j < right.Count)
+            {
+                if (left[i].CompareTo(right[j]) <= 0)
+                    result.Add(left[i++]);
+                else
+                    result.Add(right[j++]);
+            }
+
+            while (i < left.Count)
+                result.Add(left[i++]);
+
+            while (j < right.Count)
+                result.Add(right[j++]);
+
+            return result;
+        }
     }
+
+
 }
