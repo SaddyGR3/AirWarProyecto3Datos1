@@ -56,6 +56,9 @@ namespace AirWarProyecto3Datos1
         private List<Nodo> posicionesPortaviones;
         // Lista para almacenar imágenes de cada avión en el mapa
         private Dictionary<Avion, Image> imagenesAviones = new Dictionary<Avion, Image>();
+
+        private List<NodoGrafo> nodosGrafo = new List<NodoGrafo>();
+
         //balas 
         private DateTime tiempoInicioDisparo;
         private bool disparando = false;
@@ -144,7 +147,10 @@ namespace AirWarProyecto3Datos1
             TimerJuego.Interval = TimeSpan.FromMilliseconds(90000);
             TimerJuego.Tick += (s, e) => DetenerJuego();
             TimerJuego.Start();
+
             DibujarMapa();
+            GenerarGrafoRutas();
+            test();
 
 
         }
@@ -369,14 +375,6 @@ namespace AirWarProyecto3Datos1
             timerExplosion.Start();
         }
 
-        private Point ObtenerCoordenadasCanvas(Nodo nodo)
-        {
-            int fila = matriz.GetRow(nodo);
-            int columna = matriz.GetColumn(nodo);
-            // Asegúrate de que TamañoCelda esté definido correctamente
-            const int TamañoCelda = 30; // Ajustar según el tamaño de las celdas en tu juego
-            return new Point(columna * TamañoCelda, fila * TamañoCelda);
-        }
 
 
         /// <summary>
@@ -405,8 +403,31 @@ namespace AirWarProyecto3Datos1
             {
                 for (int j = 0; j < 30; j++)
                 {
+                    Nodo nodo = matriz.Matrix[i, j];
                     double noiseValue = perlin.Generate(i * 0.1, j * 0.1); // Escala para ajustar el "zoom"
-                    matriz.Matrix[i, j].Terreno = noiseValue > 0 ? TipoTerreno.Tierra : TipoTerreno.Mar;
+
+                    // Determina el tipo de terreno
+                    nodo.Terreno = noiseValue > 0 ? TipoTerreno.Tierra : TipoTerreno.Mar;
+
+                    // Asigna el PesoRuta según el tipo de terreno
+                    if (nodo.Terreno == TipoTerreno.Tierra)
+                    {
+                        nodo.PesoRuta = 1; // Tierra
+                    }
+                    else if (nodo.Terreno == TipoTerreno.Mar)
+                    {
+                        nodo.PesoRuta = 8000; // Mar
+                    }
+
+                    // Ajusta el PesoRuta si el nodo tiene una estructura
+                    if (nodo.TieneAeropuerto)
+                    {
+                        nodo.PesoRuta = 4; // Aeropuerto
+                    }
+                    else if (nodo.TienePortaviones)
+                    {
+                        nodo.PesoRuta = 8; // Portaviones
+                    }
                 }
             }
         }
@@ -432,6 +453,7 @@ namespace AirWarProyecto3Datos1
                 {
                     var nuevoAeropuerto = new Aeropuerto(nodo);
                     nodo.TieneAeropuerto = true;
+                    nodo.PesoRuta = 4; // Peso de ruta para aeropuertos
                     aeropuertos.Add(nuevoAeropuerto);
                     destinosPosibles.Add(nodo); // Agregar a la lista única
                     aeropuertosGenerados++;
@@ -448,6 +470,7 @@ namespace AirWarProyecto3Datos1
                 {
                     var nuevoPortaviones = new Portaviones(nodo);
                     nodo.TienePortaviones = true;
+                    nodo.PesoRuta = 8; // Peso de ruta para aeropuertos
                     portaviones.Add(nuevoPortaviones);
                     destinosPosibles.Add(nodo); // Agregar a la lista única
                     portavionesGenerados++;
@@ -487,6 +510,248 @@ namespace AirWarProyecto3Datos1
         }
 
 
+        private void test()
+        {
+            for (int i = 0; i < 30; i++)
+            {
+                for (int j = 0; j < 30; j++)
+                {
+                    Nodo nodo = matriz.Matrix[i, j];
+                    //System.Diagnostics.Debug.WriteLine($"Nodo ({i}, {j}): Terreno={nodo.Terreno}, PesoRuta={nodo.PesoRuta}");
+                }
+            }
+        }
+        private void ConstruirGrafoConIntermedios()
+        {
+            nodosGrafo.Clear();
+
+            // Crear nodos del grafo a partir de destinos posibles
+            foreach (var nodo in destinosPosibles)
+            {
+                nodosGrafo.Add(new NodoGrafo { Nodo = nodo });
+            }
+
+            // Calcular conexiones entre nodos
+            foreach (var nodoGrafo in nodosGrafo)
+            {
+                foreach (var otroNodoGrafo in nodosGrafo)
+                {
+                    if (nodoGrafo != otroNodoGrafo)
+                    {
+                        Nodo origen = nodoGrafo.Nodo;
+                        Nodo destino = otroNodoGrafo.Nodo;
+
+                        // Verificar si hay nodos intermedios
+                        bool requiereIntermedio = HayNodoIntermedio(origen, destino, destinosPosibles, 20);
+
+                        if (!requiereIntermedio)
+                        {
+                            // Conexión directa si no hay intermedios relevantes
+                            double peso = CalcularPesoRuta(origen, destino);
+                            nodoGrafo.Vecinos.Add(new Arista
+                            {
+                                Destino = otroNodoGrafo,
+                                Peso = peso
+                            });
+                        }
+                    }
+                }
+            }
+
+            DibujarRutas();
+        }
+        private bool HayNodoIntermedio(Nodo origen, Nodo destino, List<Nodo> posiblesIntermedios, int rango)
+        {
+            int fila1 = matriz.GetRow(origen);
+            int col1 = matriz.GetColumn(origen);
+            int fila2 = matriz.GetRow(destino);
+            int col2 = matriz.GetColumn(destino);
+
+            foreach (var intermedio in posiblesIntermedios)
+            {
+                int filaIntermedio = matriz.GetRow(intermedio);
+                int colIntermedio = matriz.GetColumn(intermedio);
+
+                // Verificar si el nodo intermedio está dentro del rango especificado
+                double distanciaIntermedioLinea = Math.Abs((col2 - col1) * (fila1 - filaIntermedio) - (fila2 - fila1) * (col1 - colIntermedio))
+                                                  / Math.Sqrt((col2 - col1) * (col2 - col1) + (fila2 - fila1) * (fila2 - fila1));
+
+                if (distanciaIntermedioLinea <= rango)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        private Point ObtenerCoordenadasCanvas(Nodo nodo)
+        {
+            int fila = matriz.GetRow(nodo);
+            int columna = matriz.GetColumn(nodo);
+            // Asegúrate de que TamañoCelda esté definido correctamente
+            const int TamañoCelda = 30; // Ajustar según el tamaño de las celdas en tu juego
+            return new Point(columna * TamañoCelda, fila * TamañoCelda);
+        }
+        private void ConstruirGrafo()
+        {
+            nodosGrafo.Clear();
+
+            foreach (var nodo in destinosPosibles)
+            {
+                nodosGrafo.Add(new NodoGrafo { Nodo = nodo });
+            }
+
+            foreach (var nodoGrafo in nodosGrafo)
+            {
+                foreach (var otroNodoGrafo in nodosGrafo)
+                {
+                    if (nodoGrafo != otroNodoGrafo)
+                    {
+                        double peso;
+                        Nodo intermedio = destinosPosibles
+                            .FirstOrDefault(n => n != nodoGrafo.Nodo && n != otroNodoGrafo.Nodo);
+
+                        if (intermedio != null)
+                        {
+                            peso = CalcularPesoConIntermedio(nodoGrafo.Nodo, intermedio, otroNodoGrafo.Nodo);
+                        }
+                        else
+                        {
+                            peso = CalcularPesoRuta(nodoGrafo.Nodo, otroNodoGrafo.Nodo);
+                        }
+
+                        nodoGrafo.Vecinos.Add(new Arista
+                        {
+                            Destino = otroNodoGrafo,
+                            Peso = peso
+                        });
+                    }
+                }
+            }
+
+            DibujarRutas();
+        }
+        private void GenerarGrafoRutas()
+        {
+            ConstruirGrafo();
+        }
+        private bool EsAdyacente(Nodo origen, Nodo destino)
+        {
+            int dx = Math.Abs(matriz.GetRow(origen) - matriz.GetRow(destino));
+            int dy = Math.Abs(matriz.GetColumn(origen) - matriz.GetColumn(destino));
+            return dx <= 1 && dy <= 1; // Adyacente si están en las 8 direcciones inmediatas
+        }
+        private double CalcularPesoConIntermedio(Nodo origen, Nodo intermedio, Nodo destino)
+        {
+            double pesoOrigenIntermedio = CalcularPesoRuta(origen, intermedio);
+            double pesoIntermedioDestino = CalcularPesoRuta(intermedio, destino);
+
+            double pesoTotal = pesoOrigenIntermedio + pesoIntermedioDestino;
+            System.Diagnostics.Debug.WriteLine($"Peso intermedio ({origen} -> {intermedio} -> {destino}): {pesoTotal}");
+            return pesoTotal;
+        }
+        private double CalcularPesoRuta(Nodo origen, Nodo destino)
+        {
+            // Distancia euclidiana para más precisión
+            int dx = matriz.GetRow(origen) - matriz.GetRow(destino);
+            int dy = matriz.GetColumn(origen) - matriz.GetColumn(destino);
+            double distancia = Math.Sqrt(dx * dx + dy * dy);
+
+            // Peso total basado en distancia y PesosRuta de los nodos
+            return distancia * (origen.PesoRuta + destino.PesoRuta);
+        }
+        private void DibujarRutas()
+        {
+            // Limpieza de rutas previas
+            MapaCanvas.Children.OfType<Line>().ToList().ForEach(linea => MapaCanvas.Children.Remove(linea));
+            MapaCanvas.Children.OfType<TextBlock>().ToList().ForEach(texto => MapaCanvas.Children.Remove(texto));
+
+            // Dibuja cada conexión entre nodos del grafo
+            foreach (var nodoGrafo in nodosGrafo)
+            {
+                foreach (var arista in nodoGrafo.Vecinos)
+                {
+                    Point origen = ObtenerCoordenadasCanvas(nodoGrafo.Nodo);
+                    Point destino = ObtenerCoordenadasCanvas(arista.Destino.Nodo);
+
+                    Line linea = new Line
+                    {
+                        X1 = origen.X + CellSize / 2,
+                        Y1 = origen.Y + CellSize / 2,
+                        X2 = destino.X + CellSize / 2,
+                        Y2 = destino.Y + CellSize / 2,
+                        Stroke = Brushes.Gray,
+                        StrokeThickness = 1
+                    };
+                    MapaCanvas.Children.Add(linea);
+
+                    // Texto con el peso de la ruta
+                    TextBlock textoPeso = new TextBlock
+                    {
+                        Text = arista.Peso.ToString("F1"),
+                        Foreground = Brushes.Black,
+                        FontSize = 12
+                    };
+                    Canvas.SetLeft(textoPeso, (linea.X1 + linea.X2) / 2);
+                    Canvas.SetTop(textoPeso, (linea.Y1 + linea.Y2) / 2);
+                    MapaCanvas.Children.Add(textoPeso);
+                }
+            }
+        }
+
+        private List<NodoGrafo> Dijkstra(NodoGrafo inicio, NodoGrafo destino)
+        {
+            var distancias = new Dictionary<NodoGrafo, double>();
+            var previos = new Dictionary<NodoGrafo, NodoGrafo>();
+            var nodosPendientes = new HashSet<NodoGrafo>(nodosGrafo);
+
+            foreach (var nodo in nodosGrafo)
+            {
+                distancias[nodo] = double.MaxValue;
+                previos[nodo] = null;
+            }
+
+            distancias[inicio] = 0;
+
+            while (nodosPendientes.Count > 0)
+            {
+                var nodoActual = nodosPendientes.OrderBy(n => distancias[n]).First();
+                nodosPendientes.Remove(nodoActual);
+
+                if (nodoActual == destino)
+                    break;
+
+                foreach (var arista in nodoActual.Vecinos)
+                {
+                    if (!nodosPendientes.Contains(arista.Destino))
+                        continue;
+
+                    double nuevaDistancia = distancias[nodoActual] + arista.Peso;
+                    if (nuevaDistancia < distancias[arista.Destino])
+                    {
+                        distancias[arista.Destino] = nuevaDistancia;
+                        previos[arista.Destino] = nodoActual;
+                    }
+                }
+            }
+
+            // Reconstruir el camino
+            var camino = new List<NodoGrafo>();
+            var actual = destino;
+            while (actual != null)
+            {
+                camino.Insert(0, actual);
+                actual = previos[actual];
+            }
+
+            return camino;
+        }
+        private double CalcularDistancia(Nodo origen, Nodo destino)
+        {
+            int dx = matriz.GetRow(origen) - matriz.GetRow(destino);
+            int dy = matriz.GetColumn(origen) - matriz.GetColumn(destino);
+            return Math.Sqrt(dx * dx + dy * dy);
+        }
         private void DibujarMapa()
         {
             MapaCanvas.Children.Clear();
@@ -563,6 +828,11 @@ namespace AirWarProyecto3Datos1
                 }
             }
         }
+
+
+
+        //Controles
+        //
         private void Window_KeyDown(object sender, KeyEventArgs e)
         {
             Nodo nodoAnterior = jugador.Ubicacion;
@@ -663,10 +933,6 @@ namespace AirWarProyecto3Datos1
             // Refresca el Canvas manualmente
             MapaCanvas.InvalidateVisual();
         }
-
-
-
-
 
         // Método para dibujar la bala (actualiza su posición en el Canvas)
         private void DibujarBala(Bala bala)
