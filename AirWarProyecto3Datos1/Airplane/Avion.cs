@@ -23,6 +23,7 @@ namespace AirWarProyecto3Datos1.Airplane
         public int Combustible { get; private set; } // Nueva propiedad
         private Dictionary<object, Dictionary<object, int>> RutasPredefinidas;
 
+        public Guid ID { get; private set; }
 
         public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles, Dictionary<object, Dictionary<object, int>> rutasPredefinidas)
         {
@@ -35,6 +36,15 @@ namespace AirWarProyecto3Datos1.Airplane
             HaLlegadoADestino = false;
             Combustible = 1000; // Inicializar con el combustible estándar
             RutasPredefinidas = rutasPredefinidas; // Almacenar las rutas calculadas
+            GenerarID();
+        }
+      
+      
+        public void GenerarID()
+        {
+            ID = Guid.NewGuid();
+            System.Diagnostics.Debug.WriteLine($"el ID es {ID}");
+
         }
 
         // Asignar un destino aleatorio desde los disponibles
