@@ -21,9 +21,10 @@ namespace AirWarProyecto3Datos1.Airplane
         public Portaviones PortavionesActual { get; private set; }
         public bool Activo { get; private set; }
         public int Combustible { get; private set; } // Nueva propiedad
+        private Dictionary<object, Dictionary<object, int>> RutasPredefinidas;
 
 
-        public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles)
+        public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles, Dictionary<object, Dictionary<object, int>> rutasPredefinidas)
         {
             NodoActual = nodoInicial;
             NodoActual.TieneAvion = true;
@@ -33,11 +34,13 @@ namespace AirWarProyecto3Datos1.Airplane
             Ruta = new List<Nodo>();
             HaLlegadoADestino = false;
             Combustible = 1000; // Inicializar con el combustible estándar
+            RutasPredefinidas = rutasPredefinidas; // Almacenar las rutas calculadas
         }
 
         // Asignar un destino aleatorio desde los disponibles
         public void AsignarDestinoAleatorio()
         {
+            // Seleccionar un destino aleatorio
             var destinosDisponibles = DestinosPosibles
                 .Where(destino => destino != NodoActual)
                 .ToList();
@@ -48,7 +51,9 @@ namespace AirWarProyecto3Datos1.Airplane
             Random random = new Random();
             int indiceDestino = random.Next(destinosDisponibles.Count);
             Destino = destinosDisponibles[indiceDestino];
-            CalcularRutaHaciaDestino();
+
+            // Evaluar rutas alternativas
+            Ruta = CalcularRutaMasEconomica(NodoActual, Destino);
 
             System.Diagnostics.Debug.WriteLine($"Destino asignado: {Destino.Data}. Ruta calculada: {Ruta.Count} nodos.");
         }
@@ -86,7 +91,114 @@ namespace AirWarProyecto3Datos1.Airplane
             }
         }
 
+        private List<Nodo> CalcularRutaMasEconomica(Nodo origen, Nodo destino)
+        {
+            List<Nodo> rutaMasEconomica = CalcularRutaRecta(matriz.GetRow(origen), matriz.GetColumn(origen), matriz.GetRow(destino), matriz.GetColumn(destino));
+            int pesoRutaDirecta = ObtenerPesoRuta(origen, destino);
 
+            foreach (var intermedio in DestinosPosibles)
+            {
+                if (intermedio == origen || intermedio == destino) continue;
+
+                // Evaluar peso usando el nodo intermedio
+                int pesoViaIntermedio = ObtenerPesoRuta(origen, intermedio) + ObtenerPesoRuta(intermedio, destino);
+
+                if (pesoViaIntermedio < pesoRutaDirecta)
+                {
+                    // Si es más económico, concatenar rutas
+                    List<Nodo> rutaViaIntermedio = new List<Nodo>();
+                    rutaViaIntermedio.AddRange(CalcularRutaRecta(matriz.GetRow(origen), matriz.GetColumn(origen), matriz.GetRow(intermedio), matriz.GetColumn(intermedio)));
+                    rutaViaIntermedio.AddRange(CalcularRutaRecta(matriz.GetRow(intermedio), matriz.GetColumn(intermedio), matriz.GetRow(destino), matriz.GetColumn(destino)));
+
+                    rutaMasEconomica = rutaViaIntermedio;
+                    pesoRutaDirecta = pesoViaIntermedio; // Actualizar el peso para comparar con otras rutas
+                }
+            }
+
+            return rutaMasEconomica;
+        }
+        private List<Nodo> CalcularRutaRecta(int filaInicio, int columnaInicio, int filaDestino, int columnaDestino)
+        {
+            List<Nodo> ruta = new List<Nodo>();
+            int filaActual = filaInicio;
+            int columnaActual = columnaInicio;
+
+            while (filaActual != filaDestino || columnaActual != columnaDestino)
+            {
+                if (filaActual < filaDestino) filaActual++;
+                else if (filaActual > filaDestino) filaActual--;
+
+                if (columnaActual < columnaDestino) columnaActual++;
+                else if (columnaActual > columnaDestino) columnaActual--;
+
+                Nodo siguienteNodo = matriz.GetNode(filaActual, columnaActual);
+                ruta.Add(siguienteNodo);
+            }
+
+            // Asegurar que el nodo final esté incluido
+            Nodo nodoFinal = matriz.GetNode(filaDestino, columnaDestino);
+            if (!ruta.Contains(nodoFinal))
+            {
+                ruta.Add(nodoFinal);
+            }
+
+            return ruta;
+        }
+        private int ObtenerPesoRuta(Nodo origen, Nodo destino)
+        {
+            if (RutasPredefinidas.TryGetValue(origen, out var destinos) && destinos.TryGetValue(destino, out var peso))
+            {
+                return peso;
+            }
+
+            return int.MaxValue; // Retorna un valor muy alto si no hay ruta definida
+        }
+        private List<Nodo> EvaluarRutaMasBarata(object origen, object destino)
+        {
+            var mejorRuta = new List<Nodo>();
+            int menorCosto = int.MaxValue;
+
+            // Cola para explorar caminos (nodo actual, ruta hasta ahora, costo acumulado)
+            var cola = new Queue<(object nodoActual, List<object> ruta, int costo)>();
+            cola.Enqueue((origen, new List<object> { origen }, 0));
+
+            while (cola.Count > 0)
+            {
+                var (nodoActual, rutaHastaAhora, costoActual) = cola.Dequeue();
+
+                // Si llegamos al destino, evaluar si es la mejor ruta
+                if (nodoActual == destino)
+                {
+                    if (costoActual < menorCosto)
+                    {
+                        menorCosto = costoActual;
+                        mejorRuta = rutaHastaAhora.Select(n => ObtenerNodo(n)).ToList();
+                    }
+                    continue;
+                }
+
+                // Continuar explorando nodos vecinos
+                if (RutasPredefinidas.ContainsKey(nodoActual))
+                {
+                    foreach (var (nodoVecino, peso) in RutasPredefinidas[nodoActual])
+                    {
+                        if (!rutaHastaAhora.Contains(nodoVecino)) // Evitar ciclos
+                        {
+                            var nuevaRuta = new List<object>(rutaHastaAhora) { nodoVecino };
+                            cola.Enqueue((nodoVecino, nuevaRuta, costoActual + peso));
+                        }
+                    }
+                }
+            }
+
+            return mejorRuta;
+        }
+        // Método auxiliar para obtener Nodo a partir de una estructura
+        private Nodo ObtenerNodo(object estructura)
+        {
+            // Tu lógica existente para mapear una estructura a un Nodo
+            return estructura as Nodo; // O el método correspondiente
+        }
         private void AvisoDespegue()
         {
             if (Destino.TieneAeropuerto && Destino.Elemento is Aeropuerto aeropuertoDestino)
@@ -103,19 +215,7 @@ namespace AirWarProyecto3Datos1.Airplane
             }
 
         }
-        // Calcular la ruta hacia el destino asignado
-        private void CalcularRutaHaciaDestino()
-        {
-            if (Destino == null)
-                throw new InvalidOperationException("El destino no está asignado.");
 
-            int filaInicio = matriz.GetRow(NodoActual);
-            int columnaInicio = matriz.GetColumn(NodoActual);
-            int filaDestino = matriz.GetRow(Destino);
-            int columnaDestino = matriz.GetColumn(Destino);
-
-            Ruta = CalcularRutaRecta(filaInicio, columnaInicio, filaDestino, columnaDestino);
-        }
 
         public void MoverAvion()
         {
@@ -146,26 +246,7 @@ namespace AirWarProyecto3Datos1.Airplane
             }
         }
 
-        // Método para calcular la ruta recta hacia el destino
-        private List<Nodo> CalcularRutaRecta(int filaInicio, int columnaInicio, int filaDestino, int columnaDestino)
-        {
-            List<Nodo> ruta = new List<Nodo>();
-            int filaActual = filaInicio;
-            int columnaActual = columnaInicio;
 
-            while (filaActual != filaDestino || columnaActual != columnaDestino)
-            {
-                if (filaActual < filaDestino) filaActual++;
-                else if (filaActual > filaDestino) filaActual--;
-
-                if (columnaActual < columnaDestino) columnaActual++;
-                else if (columnaActual > columnaDestino) columnaActual--;
-
-                Nodo siguienteNodo = matriz.GetNode(filaActual, columnaActual);
-                ruta.Add(siguienteNodo);
-            }
-            return ruta;
-        }
 
         // Reducir combustible al moverse
         private void ConsumirCombustible()

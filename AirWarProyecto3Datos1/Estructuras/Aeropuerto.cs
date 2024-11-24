@@ -91,12 +91,12 @@ namespace AirWarProyecto3Datos1.Estructuras
             }
         }
 
-        public Avion CrearAvion(Matriz matriz, List<Nodo> DestinosPosibles)
+        public Avion CrearAvion(Matriz matriz, List<Nodo> DestinosPosibles, Dictionary<object, Dictionary<object, int>> rutas)
         {
             if (!HayEspacioEnHangar() || !PuedeConstruirAvion())
                 throw new InvalidOperationException("No se puede construir un avión en este momento.");
 
-            Avion nuevoAvion = new Avion(Ubicacion, matriz, DestinosPosibles);
+            Avion nuevoAvion = new Avion(Ubicacion, matriz, DestinosPosibles,rutas);
             avionesEnHangar++;
             ultimoTiempoConstruccion = DateTime.Now; // Actualiza el tiempo de construcción
             System.Diagnostics.Debug.WriteLine($"se creo un avion en el aeropuerto:");

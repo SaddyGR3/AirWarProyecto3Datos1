@@ -15,6 +15,13 @@
     <None Remove="Imagenes\explosion.png" />
     <None Remove="Imagenes\Jugador.png" />
     <None Remove="Imagenes\portaviones.png" />
+    <None Remove="Rutas\rutas.txt" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="Rutas\rutas.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
