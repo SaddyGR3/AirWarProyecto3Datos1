@@ -1084,7 +1084,7 @@ namespace AirWarProyecto3Datos1
             // Eliminar las balas marcadas
             foreach (var bala in balasAEliminar)
             {
-                System.Diagnostics.Debug.WriteLine("una bala debio borrarse");
+                //System.Diagnostics.Debug.WriteLine("una bala debio borrarse");
                 
                 bala.DestruirBala();
                 EliminarBalaDeVista(bala);

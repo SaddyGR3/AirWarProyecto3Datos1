@@ -3,6 +3,7 @@ using AirWarProyecto3Datos1.LogicaCentral;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Media;
@@ -20,9 +21,12 @@ namespace AirWarProyecto3Datos1.Airplane
         private List<Nodo> DestinosPosibles { get; set; }
         public Portaviones PortavionesActual { get; private set; }
         public bool Activo { get; private set; }
-        public int Combustible { get; private set; } // Nueva propiedad
+        public int Combustible { get; private set; } 
         private Dictionary<object, Dictionary<object, int>> RutasPredefinidas;
-
+        public Pilot Pilot { get; private set; }
+        public Copilot Copilot { get; private set; }
+        public Maintenance Maintenance { get; private set; }
+        public SpaceAwareness SpaceAwareness { get; private set; }
         public Guid ID { get; private set; }
 
         public Avion(Nodo nodoInicial, Matriz matriz, List<Nodo> destinosPosibles, Dictionary<object, Dictionary<object, int>> rutasPredefinidas)
@@ -34,9 +38,15 @@ namespace AirWarProyecto3Datos1.Airplane
             Activo = true;
             Ruta = new List<Nodo>();
             HaLlegadoADestino = false;
-            Combustible = 1000; // Inicializar con el combustible estándar
-            RutasPredefinidas = rutasPredefinidas; // Almacenar las rutas calculadas
+            Combustible = 1000; 
+            RutasPredefinidas = rutasPredefinidas; // Almacena las rutas calculadas
             GenerarID();
+
+            // Inicializa módulos de AI al crear el avión
+            Pilot = new Pilot();
+            Copilot = new Copilot();
+            Maintenance = new Maintenance();
+            SpaceAwareness = new SpaceAwareness();
         }
       
       
@@ -47,7 +57,7 @@ namespace AirWarProyecto3Datos1.Airplane
 
         }
 
-        // Asignar un destino aleatorio desde los disponibles
+        // Asigna un destino aleatorio desde los disponibles
         public void AsignarDestinoAleatorio()
         {
             // Seleccionar un destino aleatorio
@@ -62,7 +72,7 @@ namespace AirWarProyecto3Datos1.Airplane
             int indiceDestino = random.Next(destinosDisponibles.Count);
             Destino = destinosDisponibles[indiceDestino];
 
-            // Evaluar rutas alternativas
+            // Evalua rutas alternativas
             Ruta = CalcularRutaMasEconomica(NodoActual, Destino);
 
             System.Diagnostics.Debug.WriteLine($"Destino asignado: {Destino.Data}. Ruta calculada: {Ruta.Count} nodos.");
@@ -71,12 +81,12 @@ namespace AirWarProyecto3Datos1.Airplane
         // Método para procesar aterrizaje y despegar automáticamente después de un tiempo
         public async Task ProcesarAterrizajeAsync()
         {
-            if (!Activo) return; // Validar si el avión aún está activo
+            if (!Activo) return; // Valida si el avión aún está activo
 
             if (Destino.TieneAeropuerto && Destino.Elemento is Aeropuerto aeropuertoDestino)
             {
                 NodoActual.TieneAvion = false;
-                aeropuertoDestino.AvionAterriza(this); // Modificar para pasar el avión actual
+                aeropuertoDestino.AvionAterriza(this); // Modifica para pasar el avión actual
                 System.Diagnostics.Debug.WriteLine($"El avión aterrizó en el aeropuerto {aeropuertoDestino.Nombre}.");
             }
             else if (Destino.TienePortaviones && Destino.Elemento is Portaviones portavionesDestino)
@@ -91,10 +101,10 @@ namespace AirWarProyecto3Datos1.Airplane
                 return;
             }
 
-            // Esperar antes de despegar
+            // Espera antes de despegar
             await Task.Delay(TimeSpan.FromSeconds(5));
 
-            // Verificar nuevamente antes de asignar destino
+            // Verifica nuevamente antes de asignar destino
             if (Activo)
             {
                 AvisoDespegue();
@@ -110,12 +120,12 @@ namespace AirWarProyecto3Datos1.Airplane
             {
                 if (intermedio == origen || intermedio == destino) continue;
 
-                // Evaluar peso usando el nodo intermedio
+                // Evalua peso usando el nodo intermedio
                 int pesoViaIntermedio = ObtenerPesoRuta(origen, intermedio) + ObtenerPesoRuta(intermedio, destino);
 
                 if (pesoViaIntermedio < pesoRutaDirecta)
                 {
-                    // Si es más económico, concatenar rutas
+                    // Si es más económico, concatena rutas
                     List<Nodo> rutaViaIntermedio = new List<Nodo>();
                     rutaViaIntermedio.AddRange(CalcularRutaRecta(matriz.GetRow(origen), matriz.GetColumn(origen), matriz.GetRow(intermedio), matriz.GetColumn(intermedio)));
                     rutaViaIntermedio.AddRange(CalcularRutaRecta(matriz.GetRow(intermedio), matriz.GetColumn(intermedio), matriz.GetRow(destino), matriz.GetColumn(destino)));
@@ -145,7 +155,7 @@ namespace AirWarProyecto3Datos1.Airplane
                 ruta.Add(siguienteNodo);
             }
 
-            // Asegurar que el nodo final esté incluido
+            // Asegura que el nodo final esté incluido
             Nodo nodoFinal = matriz.GetNode(filaDestino, columnaDestino);
             if (!ruta.Contains(nodoFinal))
             {
@@ -176,7 +186,7 @@ namespace AirWarProyecto3Datos1.Airplane
             {
                 var (nodoActual, rutaHastaAhora, costoActual) = cola.Dequeue();
 
-                // Si llegamos al destino, evaluar si es la mejor ruta
+                // Si llegamos al destino, evalua si es la mejor ruta
                 if (nodoActual == destino)
                 {
                     if (costoActual < menorCosto)
@@ -187,7 +197,7 @@ namespace AirWarProyecto3Datos1.Airplane
                     continue;
                 }
 
-                // Continuar explorando nodos vecinos
+                // Continua explorando nodos vecinos
                 if (RutasPredefinidas.ContainsKey(nodoActual))
                 {
                     foreach (var (nodoVecino, peso) in RutasPredefinidas[nodoActual])
@@ -206,8 +216,7 @@ namespace AirWarProyecto3Datos1.Airplane
         // Método auxiliar para obtener Nodo a partir de una estructura
         private Nodo ObtenerNodo(object estructura)
         {
-            // Tu lógica existente para mapear una estructura a un Nodo
-            return estructura as Nodo; // O el método correspondiente
+            return estructura as Nodo; 
         }
         private void AvisoDespegue()
         {
@@ -242,7 +251,7 @@ namespace AirWarProyecto3Datos1.Airplane
                 NodoActual.TieneAvion = true;
                 Ruta.RemoveAt(0);
                 ConsumirCombustible(); // Consumir combustible al moverse
-                System.Diagnostics.Debug.WriteLine("Se mueve algun avion");
+                //System.Diagnostics.Debug.WriteLine("Se mueve algun avion");
 
                 if (Ruta.Count == 0)
                 {
@@ -258,11 +267,17 @@ namespace AirWarProyecto3Datos1.Airplane
 
 
 
-        // Reducir combustible al moverse
+        // Reduce combustible al moverse
         private void ConsumirCombustible()
         {
             Combustible -= 10;
-            System.Diagnostics.Debug.WriteLine($"Combustible restante: {Combustible}");
+            //System.Diagnostics.Debug.WriteLine($"Combustible restante: {Combustible}");
+
+            // Incrementar las horas de vuelo en los módulos IA
+            foreach (var modulo in ObtenerModulos())
+            {
+                modulo.IncrementarHorasDeVuelo();
+            }
 
             if (Combustible <= 0)
             {
@@ -283,10 +298,80 @@ namespace AirWarProyecto3Datos1.Airplane
         {
             Activo = false;
             NodoActual.TieneAvion = false;
-            System.Diagnostics.Debug.WriteLine("El avión se destruyó por falta de combustible.");
-            // Lógica adicional para removerlo del juego si es necesario
+            System.Diagnostics.Debug.WriteLine($"El avión con ID {ID} se destruyó por falta de combustible.");
+
+            // Imprime detalles de los módulos de IA
+            System.Diagnostics.Debug.WriteLine("Detalles de los módulos del avión:");
+            var modulos = ObtenerModulos();
+            foreach (var modulo in modulos)
+            {
+                System.Diagnostics.Debug.WriteLine($"ID: {modulo.ID}, Rol: {modulo.Rol}, Horas de Vuelo: {modulo.HorasDeVuelo}");
+            }
+        }
+
+
+        // Obtiene todos los módulos
+        public List<ModuloIA> ObtenerModulos()
+        {
+            return new List<ModuloIA> { Pilot, Copilot, Maintenance, SpaceAwareness };
+        }
+
+        // Métodos para ordenar los módulos
+        public void OrdenarModulosPorID()
+        {
+            var modulos = ObtenerModulos();
+            SelectionSort(modulos, CompararPorID);
+        }
+
+        public void OrdenarModulosPorRol()
+        {
+            var modulos = ObtenerModulos();
+            SelectionSort(modulos, CompararPorRol);
+        }
+
+        public void OrdenarModulosPorHoras()
+        {
+            var modulos = ObtenerModulos();
+            SelectionSort(modulos, CompararPorHoras);
+        }
+
+        // Algoritmo Selection Sort para ordenar los módulos
+        private void SelectionSort(List<ModuloIA> modulos, Comparison<ModuloIA> comparador)
+        {
+            for (int i = 0; i < modulos.Count - 1; i++)
+            {
+                int indiceMin = i;
+                for (int j = i + 1; j < modulos.Count; j++)
+                {
+                    if (comparador(modulos[j], modulos[indiceMin]) < 0)
+                    {
+                        indiceMin = j;
+                    }
+                }
+
+                // Intercambia los elementos
+                var temp = modulos[i];
+                modulos[i] = modulos[indiceMin];
+                modulos[indiceMin] = temp;
+            }
+        }
+
+        private int CompararPorID(ModuloIA a, ModuloIA b)
+        {
+            return string.Compare(a.ID, b.ID);
+        }
+
+        private int CompararPorRol(ModuloIA a, ModuloIA b)
+        {
+            return string.Compare(a.Rol, b.Rol);
+        }
+
+        private int CompararPorHoras(ModuloIA a, ModuloIA b)
+        {
+            return a.HorasDeVuelo.CompareTo(b.HorasDeVuelo);
         }
         // Método para obtener el siguiente nodo en la dirección hacia el destino
+
         private Nodo ObtenerSiguienteNodoEnDireccion(Nodo actual, Nodo destino)
         {
             // Compara las posiciones en relación con el nodo actual y el destino
